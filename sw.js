@@ -1,19 +1,20 @@
-const CACHE_NAME = "suno-prompt-studio-v1";
+const CACHE_NAME = "suno-prompt-studio-v2";
 
-// All the files we need to cache for offline use
+// Only cache local files — no external CDN URLs
 const ASSETS = [
-  "/index.html",
-  "/manifest.json",
-  "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap",
-  "https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"
+  "/suno-prompt-studio/",
+  "/suno-prompt-studio/index.html",
+  "/suno-prompt-studio/manifest.json",
+  "/suno-prompt-studio/icon-192.png",
+  "/suno-prompt-studio/icon-512.png"
 ];
 
-// Install: cache all assets
+// Install: cache only local assets
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(ASSETS))
+      .catch(err => console.log("Cache install error:", err))
   );
   self.skipWaiting();
 });
@@ -28,31 +29,34 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// Fetch: serve from cache, fall back to network
-// API calls to Anthropic always go to network (never cached)
+// Fetch: serve local files from cache, everything else from network
 self.addEventListener("fetch", event => {
   const url = event.request.url;
 
-  // Never intercept Anthropic API calls — always go straight to network
-  if (url.includes("api.anthropic.com")) {
+  // Always go to network for API calls and external resources
+  if (
+    url.includes("api.anthropic.com") ||
+    url.includes("fonts.googleapis.com") ||
+    url.includes("fonts.gstatic.com") ||
+    url.includes("cdnjs.cloudflare.com")
+  ) {
     event.respondWith(fetch(event.request));
     return;
   }
 
+  // For local files: cache first, fall back to network
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        // Cache successful GET responses for future offline use
         if (event.request.method === "GET" && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       }).catch(() => {
-        // If completely offline and not in cache, return a fallback
         if (event.request.destination === "document") {
-          return caches.match("/index.html");
+          return caches.match("/suno-prompt-studio/index.html");
         }
       });
     })
