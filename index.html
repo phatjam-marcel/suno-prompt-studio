@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Suno Prompt Studio</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#2a9d8f"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Prompt Studio"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body { background: #070b12; font-family: 'DM Sans', sans-serif; color: #c8d0dc; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: #070b12; }
+  ::-webkit-scrollbar-thumb { background: #1e2d44; border-radius: 3px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  textarea:focus, input:focus { border-color: #2a9d8f !important; outline: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ── LocalStorage DB ──────────────────────────────────────────
+const DB_KEY = "suno-prompt-studio-v1";
+function loadDB() {
+  try { return JSON.parse(localStorage.getItem(DB_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveDB(db) {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+  catch(e) { console.error("Save failed", e); }
+}
+
+// ── Claude API ───────────────────────────────────────────────
+async function generatePromptsForGenre(genre, apiKey) {
+  const system = `You are an expert music producer and Suno AI prompt engineer.
+Generate exactly 20 comprehensive, unique music prompts for the genre provided.
+Each prompt must be ready to paste directly into Suno and must include ALL of the following in a natural, flowing description:
+- Tempo / BPM (e.g. "120 BPM", "slow 70 BPM", "uptempo 145 BPM")
+- Specific instruments (name real instruments, effects, processing where relevant)
+- Mood & atmosphere (vivid, evocative language)
+- Vocal style directions (gender, tone, technique e.g. "breathy female alto", "gruff male baritone", or "instrumental, no vocals")
+- Song structure hints (e.g. "builds from sparse intro through anthemic chorus to stripped-back outro", "single continuous movement")
+
+RULES:
+- Each prompt should be 3-5 sentences long
+- Make every prompt distinct — vary the sub-genre, mood, instrumentation
+- Write in the descriptive style Suno understands best
+- Return ONLY a valid JSON array of 20 strings. No keys, no markdown fences, no preamble.`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-opus-4-5",
+      max_tokens: 4000,
+      system,
+      messages: [{ role: "user", content: `Generate 20 Suno prompts for the genre: ${genre}` }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  const text = (data.content || []).map(b => b.text || "").join("");
+  const clean = text.replace(/```json|```/g, "").trim();
+  const parsed = JSON.parse(clean);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+// ── Components ───────────────────────────────────────────────
+function PromptCard({ prompt, index, onCopy, isCopied }) {
+  const bpm = (prompt.match(/\b\d{2,3}\s*BPM\b/i) || [])[0];
+  return (
+    <div style={{
+      background:"#0e1117", border:"1px solid #1e2535", borderRadius:"8px",
+      padding:"18px 20px", display:"flex", gap:"14px", alignItems:"flex-start",
+      transition:"border-color 0.2s"
+    }}
+      onMouseEnter={e=>e.currentTarget.style.borderColor="#2a9d8f55"}
+      onMouseLeave={e=>e.currentTarget.style.borderColor="#1e2535"}
+    >
+      <div style={{flex:1}}>
+        <div style={{display:"flex",gap:"6px",marginBottom:"10px",flexWrap:"wrap"}}>
+          <span style={{fontSize:"10px",padding:"2px 7px",background:"#1e2535",color:"#64748b",borderRadius:"3px",letterSpacing:"1px"}}>#{index+1}</span>
+          {bpm && <span style={{fontSize:"10px",padding:"2px 7px",background:"#f59e0b22",color:"#f59e0b",border:"1px solid #f59e0b44",borderRadius:"3px",letterSpacing:"1px"}}>{bpm}</span>}
+        </div>
+        <p style={{fontSize:"14px",lineHeight:1.8,color:"#c8d0dc",fontFamily:"Georgia,serif"}}>{prompt}</p>
+      </div>
+      <button onClick={()=>onCopy(prompt)} style={{
+        flexShrink:0, padding:"8px 14px", borderRadius:"6px",
+        background: isCopied?"#2a9d8f22":"#131b2e",
+        color: isCopied?"#2a9d8f":"#64748b",
+        border:`1px solid ${isCopied?"#2a9d8f":"#1e2d44"}`,
+        cursor:"pointer", fontSize:"12px", fontFamily:"inherit",
+        transition:"all 0.2s", whiteSpace:"nowrap"
+      }}>{isCopied ? "✓ Copied" : "Copy"}</button>
+    </div>
+  );
+}
+
+function InstallBanner({ onInstall, onDismiss }) {
+  return (
+    <div style={{
+      position:"fixed", bottom:"20px", left:"50%", transform:"translateX(-50%)",
+      background:"#0e1825", border:"1px solid #2a9d8f", borderRadius:"10px",
+      padding:"14px 20px", display:"flex", alignItems:"center", gap:"14px",
+      boxShadow:"0 8px 32px #000a", zIndex:100, whiteSpace:"nowrap"
+    }}>
+      <span style={{fontSize:"20px"}}>📲</span>
+      <div>
+        <div style={{fontSize:"13px",fontWeight:700,color:"#e2e8f0"}}>Install as App</div>
+        <div style={{fontSize:"11px",color:"#475569"}}>Add to your home screen for quick access</div>
+      </div>
+      <button onClick={onInstall} style={{
+        padding:"8px 16px", borderRadius:"6px", background:"#2a9d8f",
+        color:"#fff", border:"none", cursor:"pointer", fontSize:"12px",
+        fontWeight:700, fontFamily:"inherit"
+      }}>Install</button>
+      <button onClick={onDismiss} style={{
+        background:"none", border:"none", color:"#475569",
+        cursor:"pointer", fontSize:"18px", lineHeight:1, padding:"4px"
+      }}>×</button>
+    </div>
+  );
+}
+
+function ApiKeyModal({ onSave }) {
+  const [key, setKey] = useState("");
+  const [error, setError] = useState("");
+  const [testing, setTesting] = useState(false);
+
+  const handleSave = async () => {
+    if (!key.trim().startsWith("sk-ant-")) {
+      setError("That doesn't look like a valid Anthropic API key (should start with sk-ant-)");
+      return;
+    }
+    setTesting(true); setError("");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "x-api-key":key.trim(),
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true"
+        },
+        body:JSON.stringify({ model:"claude-opus-4-5", max_tokens:10, messages:[{role:"user",content:"hi"}] })
+      });
+      if (res.status === 401) { setError("Invalid API key — please double-check it."); setTesting(false); return; }
+      onSave(key.trim());
+    } catch(e) { setError("Could not connect. Check your internet connection."); setTesting(false); }
+  };
+
+  return (
+    <div style={{
+      position:"fixed",inset:0,background:"#070b12ee",display:"flex",
+      alignItems:"center",justifyContent:"center",zIndex:999,padding:"20px"
+    }}>
+      <div style={{background:"#0e1117",border:"1px solid #1e2d44",borderRadius:"12px",padding:"36px",maxWidth:"480px",width:"100%"}}>
+        <div style={{fontSize:"28px",marginBottom:"12px",textAlign:"center"}}>🎵</div>
+        <h2 style={{fontSize:"20px",fontWeight:700,color:"#e2e8f0",textAlign:"center",marginBottom:"8px"}}>Welcome to Suno Prompt Studio</h2>
+        <p style={{fontSize:"13px",color:"#475569",lineHeight:1.7,textAlign:"center",marginBottom:"24px"}}>
+          To generate prompts, you need an Anthropic API key.<br/>
+          Get one at <a href="https://console.anthropic.com" target="_blank" style={{color:"#2a9d8f"}}>console.anthropic.com</a>
+          &nbsp;→ API Keys → Create Key.
+        </p>
+        <label style={{fontSize:"11px",color:"#64748b",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"8px"}}>Your API Key</label>
+        <input
+          type="password" value={key} onChange={e=>setKey(e.target.value)}
+          placeholder="sk-ant-api03-..."
+          onKeyDown={e=>e.key==="Enter"&&handleSave()}
+          style={{
+            width:"100%",background:"#070b12",border:"1px solid #1e2d44",
+            borderRadius:"7px",color:"#e2e8f0",padding:"12px 14px",
+            fontSize:"14px",fontFamily:"'DM Mono',monospace",marginBottom:"8px"
+          }}
+        />
+        {error && <p style={{color:"#ef4444",fontSize:"12px",marginBottom:"10px"}}>{error}</p>}
+        <p style={{fontSize:"11px",color:"#334155",lineHeight:1.6,marginBottom:"20px"}}>
+          🔒 Your key is saved only on this device in local storage. It is never sent anywhere except directly to Anthropic.
+        </p>
+        <button onClick={handleSave} disabled={!key.trim()||testing} style={{
+          width:"100%",padding:"12px",borderRadius:"7px",
+          background:!key.trim()?"#1a2235":"#2a9d8f",
+          color:!key.trim()?"#334155":"#fff",
+          border:"none",cursor:!key.trim()?"default":"pointer",
+          fontSize:"14px",fontWeight:700,fontFamily:"inherit"
+        }}>{testing?"Verifying…":"Save & Continue"}</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ─────────────────────────────────────────────────
+function App() {
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("suno-api-key") || "");
+  const [showApiModal, setShowApiModal] = useState(false);
+  const [db, setDb] = useState(() => loadDB());
+  const [view, setView] = useState("welcome");
+  const [activeGenre, setActiveGenre] = useState(null);
+  const [genreInput, setGenreInput] = useState("");
+  const [generating, setGenerating] = useState({});
+  const [copiedText, setCopiedText] = useState(null);
+  const [filter, setFilter] = useState("");
+  const [error, setError] = useState("");
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  // Capture PWA install prompt
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") { setInstallPrompt(null); setShowInstallBanner(false); }
+  };
+
+  const genres = Object.keys(db).sort();
+  const anyGenerating = Object.values(generating).some(Boolean);
+  const totalPrompts = Object.values(db).reduce((a,b)=>a+b.length,0);
+
+  const persistAndSet = (newDb) => { setDb(newDb); saveDB(newDb); };
+
+  const handleSaveKey = (key) => {
+    localStorage.setItem("suno-api-key", key);
+    setApiKey(key); setShowApiModal(false);
+  };
+
+  const handleGenerate = async () => {
+    if (!apiKey) { setShowApiModal(true); return; }
+    const lines = genreInput.split("\n").map(l=>l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    setError(""); setView("welcome");
+    for (const genre of lines) {
+      if (db[genre]) continue;
+      setGenerating(prev=>({...prev,[genre]:true}));
+      try {
+        const prompts = await generatePromptsForGenre(genre, apiKey);
+        setDb(prev => { const u={...prev,[genre]:prompts}; saveDB(u); return u; });
+      } catch(e) {
+        setError(`Error generating "${genre}": ${e.message}`);
+      } finally {
+        setGenerating(prev=>({...prev,[genre]:false}));
+      }
+    }
+    setGenreInput("");
+  };
+
+  const handleRegenerate = async (genre) => {
+    if (!apiKey) { setShowApiModal(true); return; }
+    setGenerating(prev=>({...prev,[genre]:true}));
+    try {
+      const prompts = await generatePromptsForGenre(genre, apiKey);
+      persistAndSet({...db,[genre]:prompts});
+    } catch(e) { setError(e.message); }
+    finally { setGenerating(prev=>({...prev,[genre]:false})); }
+  };
+
+  const handleDeleteGenre = (genre) => {
+    const updated={...db}; delete updated[genre]; persistAndSet(updated);
+    if (activeGenre===genre) { setActiveGenre(null); setView("welcome"); }
+  };
+
+  const openGenre = (genre) => { setActiveGenre(genre); setView("prompts"); setFilter(""); };
+
+  const handleCopy = (text) => {
+    try { navigator.clipboard.writeText(text); } catch {}
+    setCopiedText(text);
+    setTimeout(()=>setCopiedText(null), 2000);
+  };
+
+  const filteredPrompts = activeGenre
+    ? (db[activeGenre]||[]).filter(p=>!filter||p.toLowerCase().includes(filter.toLowerCase()))
+    : [];
+
+  const genreCount = genreInput.split("\n").filter(l=>l.trim()).length;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
+      {showApiModal && <ApiKeyModal onSave={handleSaveKey}/>}
+      {showInstallBanner && (
+        <InstallBanner onInstall={handleInstall} onDismiss={()=>setShowInstallBanner(false)}/>
+      )}
+
+      {/* Header */}
+      <header style={{
+        display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"0 24px",height:"54px",background:"#080c14",
+        borderBottom:"1px solid #141c2e",flexShrink:0
+      }}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <div style={{
+            width:"28px",height:"28px",borderRadius:"7px",fontSize:"14px",
+            background:"linear-gradient(135deg,#2a9d8f,#264653)",
+            display:"flex",alignItems:"center",justifyContent:"center"
+          }}>🎵</div>
+          <span style={{fontWeight:700,fontSize:"15px",color:"#e2e8f0",letterSpacing:"-0.3px"}}>
+            Suno Prompt Studio
+          </span>
+        </div>
+        <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+          {anyGenerating && (
+            <span style={{fontSize:"11px",color:"#f59e0b",letterSpacing:"1px",animation:"pulse 1s infinite"}}>● GENERATING…</span>
+          )}
+          <span style={{fontSize:"11px",color:"#334155",letterSpacing:"1px"}}>
+            {genres.length} GENRES · {totalPrompts} PROMPTS
+          </span>
+          {installPrompt && (
+            <button onClick={handleInstall} style={{
+              padding:"5px 12px",borderRadius:"5px",background:"#2a9d8f22",
+              color:"#2a9d8f",border:"1px solid #2a9d8f44",
+              cursor:"pointer",fontSize:"11px",fontFamily:"inherit",letterSpacing:"1px"
+            }}>📲 Install App</button>
+          )}
+          <button onClick={()=>setShowApiModal(true)} style={{
+            padding:"5px 12px",borderRadius:"5px",background:"#131b2e",
+            color:apiKey?"#2a9d8f":"#f59e0b",
+            border:`1px solid ${apiKey?"#2a9d8f44":"#f59e0b44"}`,
+            cursor:"pointer",fontSize:"11px",fontFamily:"inherit",letterSpacing:"1px"
+          }}>{apiKey ? "✓ API Key" : "⚠ Set API Key"}</button>
+        </div>
+      </header>
+
+      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+        {/* Sidebar */}
+        <nav style={{
+          width:"220px",flexShrink:0,background:"#080c14",
+          borderRight:"1px solid #141c2e",display:"flex",
+          flexDirection:"column",overflowY:"auto"
+        }}>
+          <div style={{padding:"14px 12px 8px"}}>
+            <button onClick={()=>setView("add")} style={{
+              width:"100%",padding:"9px 12px",borderRadius:"7px",
+              background:view==="add"?"#2a9d8f":"#131b2e",
+              color:view==="add"?"#fff":"#94a3b8",
+              border:`1px solid ${view==="add"?"#2a9d8f":"#1e2d44"}`,
+              cursor:"pointer",fontSize:"13px",fontWeight:600,
+              fontFamily:"inherit",textAlign:"left",
+              display:"flex",alignItems:"center",gap:"8px"
+            }}>
+              <span style={{fontSize:"16px",lineHeight:1}}>＋</span> Add Genres
+            </button>
+          </div>
+          <div style={{padding:"8px 16px 4px"}}>
+            <span style={{fontSize:"10px",color:"#334155",letterSpacing:"2px",textTransform:"uppercase"}}>Library</span>
+          </div>
+          {genres.length===0 && (
+            <p style={{fontSize:"12px",color:"#334155",padding:"12px 16px",lineHeight:1.6}}>No genres yet.</p>
+          )}
+          {genres.map(genre=>(
+            <div key={genre} style={{position:"relative",display:"flex",alignItems:"center"}}>
+              <button onClick={()=>openGenre(genre)} style={{
+                flex:1,textAlign:"left",padding:"9px 36px 9px 14px",
+                background:activeGenre===genre&&view==="prompts"?"#0e1825":"transparent",
+                color:activeGenre===genre&&view==="prompts"?"#e2e8f0":"#64748b",
+                border:"none",
+                borderLeft:`3px solid ${activeGenre===genre&&view==="prompts"?"#2a9d8f":"transparent"}`,
+                cursor:"pointer",fontSize:"13px",fontFamily:"inherit",
+                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
+              }}>
+                {generating[genre]
+                  ? <span style={{color:"#f59e0b"}}>⟳ {genre}</span>
+                  : <>{genre} <span style={{float:"right",fontSize:"10px",color:"#334155",marginRight:"4px"}}>{(db[genre]||[]).length}</span></>
+                }
+              </button>
+              <button onClick={()=>handleDeleteGenre(genre)} title="Delete" style={{
+                position:"absolute",right:"6px",background:"none",border:"none",
+                color:"#334155",cursor:"pointer",fontSize:"15px",padding:"4px",lineHeight:1,
+                opacity:0,transition:"opacity 0.15s"
+              }}
+                onMouseEnter={e=>e.target.style.opacity=1}
+                onMouseLeave={e=>e.target.style.opacity=0}
+              >×</button>
+            </div>
+          ))}
+        </nav>
+
+        {/* Main */}
+        <main style={{flex:1,overflowY:"auto",padding:"32px 36px"}}>
+          {error && (
+            <div style={{background:"#ef444422",border:"1px solid #ef444444",borderRadius:"7px",padding:"12px 16px",marginBottom:"20px",fontSize:"13px",color:"#ef4444"}}>
+              {error}
+              <button onClick={()=>setError("")} style={{float:"right",background:"none",border:"none",color:"#ef4444",cursor:"pointer"}}>✕</button>
+            </div>
+          )}
+
+          {view==="add" && (
+            <div style={{maxWidth:"580px"}}>
+              <h2 style={{fontSize:"22px",fontWeight:700,color:"#e2e8f0",marginBottom:"6px"}}>Add Genres</h2>
+              <p style={{color:"#475569",fontSize:"13px",lineHeight:1.7,marginBottom:"22px"}}>
+                Paste your full genre list — one per line. Claude generates <strong style={{color:"#e2e8f0"}}>20 comprehensive Suno-ready prompts</strong> per genre and saves them permanently to this device.
+              </p>
+              <textarea
+                value={genreInput} onChange={e=>setGenreInput(e.target.value)}
+                placeholder={"Lo-Fi Hip Hop\nDark Techno\nDoom Metal\nAfrobeats\nNeo-Soul\n..."}
+                rows={10}
+                style={{
+                  width:"100%",background:"#0e1117",border:"1px solid #1e2d44",
+                  borderRadius:"8px",color:"#c8d0dc",padding:"14px 16px",
+                  fontSize:"14px",fontFamily:"'DM Mono',monospace",lineHeight:1.7,
+                  resize:"vertical",display:"block",marginBottom:"12px"
+                }}
+              />
+              <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
+                <button onClick={handleGenerate} disabled={!genreCount||anyGenerating} style={{
+                  padding:"11px 26px",borderRadius:"7px",
+                  background:genreCount&&!anyGenerating?"#2a9d8f":"#1a2235",
+                  color:genreCount&&!anyGenerating?"#fff":"#334155",
+                  border:"none",cursor:genreCount&&!anyGenerating?"pointer":"default",
+                  fontSize:"13px",fontWeight:700,fontFamily:"inherit"
+                }}>Generate &amp; Save All</button>
+                <span style={{fontSize:"12px",color:"#334155"}}>{genreCount} genre{genreCount!==1?"s":""} detected</span>
+              </div>
+            </div>
+          )}
+
+          {view==="prompts" && activeGenre && (
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"12px",marginBottom:"22px"}}>
+                <div>
+                  <div style={{fontSize:"10px",color:"#2a9d8f",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"4px"}}>Genre</div>
+                  <h2 style={{fontSize:"26px",fontWeight:700,color:"#e2e8f0",letterSpacing:"-0.5px"}}>{activeGenre}</h2>
+                  <div style={{fontSize:"12px",color:"#334155",marginTop:"4px"}}>
+                    {filteredPrompts.length} prompt{filteredPrompts.length!==1?"s":""}
+                    {filter && ` matching "${filter}"`}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+                  <button onClick={()=>handleRegenerate(activeGenre)} disabled={generating[activeGenre]} style={{
+                    padding:"9px 16px",borderRadius:"7px",background:"#131b2e",color:"#94a3b8",
+                    border:"1px solid #1e2d44",cursor:"pointer",fontSize:"12px",fontFamily:"inherit",fontWeight:600
+                  }}>{generating[activeGenre]?"Regenerating…":"⟳ Regenerate"}</button>
+                  <button onClick={()=>{ try{navigator.clipboard.writeText(filteredPrompts.join("\n\n---\n\n"));}catch{} }} style={{
+                    padding:"9px 16px",borderRadius:"7px",background:"#131b2e",color:"#94a3b8",
+                    border:"1px solid #1e2d44",cursor:"pointer",fontSize:"12px",fontFamily:"inherit",fontWeight:600
+                  }}>Copy All</button>
+                </div>
+              </div>
+              <input type="text" placeholder="Filter prompts by keyword…"
+                value={filter} onChange={e=>setFilter(e.target.value)}
+                style={{
+                  width:"100%",maxWidth:"380px",background:"#0e1117",border:"1px solid #1e2535",
+                  borderRadius:"7px",color:"#c8d0dc",padding:"9px 14px",fontSize:"13px",
+                  fontFamily:"inherit",display:"block",marginBottom:"18px"
+                }}
+              />
+              {generating[activeGenre] ? (
+                <div style={{textAlign:"center",padding:"60px 0",color:"#f59e0b",fontSize:"14px"}}>
+                  ⟳ Generating 20 prompts for {activeGenre}…
+                </div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                  {filteredPrompts.map((p,i)=>(
+                    <PromptCard key={i} prompt={p} index={i} onCopy={handleCopy} isCopied={copiedText===p}/>
+                  ))}
+                  {filteredPrompts.length===0&&<p style={{color:"#334155",fontSize:"14px",padding:"20px 0"}}>No prompts match your filter.</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {view==="welcome" && (
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"70%",gap:"16px",textAlign:"center"}}>
+              {anyGenerating ? (
+                <>
+                  <div style={{fontSize:"40px",animation:"spin 1.5s linear infinite",display:"inline-block"}}>⟳</div>
+                  <div style={{color:"#f59e0b",fontSize:"14px",letterSpacing:"1px"}}>Generating & saving prompts…</div>
+                  <div style={{color:"#334155",fontSize:"12px"}}>{Object.entries(generating).filter(([,v])=>v).map(([k])=>k).join(", ")}</div>
+                </>
+              ) : genres.length > 0 ? (
+                <><div style={{fontSize:"40px"}}>🎛️</div><div style={{color:"#475569",fontSize:"15px"}}>Select a genre from the sidebar</div></>
+              ) : (
+                <>
+                  <div style={{fontSize:"52px"}}>🎵</div>
+                  <div style={{fontSize:"20px",fontWeight:700,color:"#e2e8f0"}}>Your prompt library is empty</div>
+                  <p style={{color:"#475569",fontSize:"13px",maxWidth:"360px",lineHeight:1.7}}>
+                    Click <strong style={{color:"#2a9d8f"}}>Add Genres</strong>, paste your list, and Claude will generate 20 rich Suno-ready prompts per genre — saved on this device forever.
+                  </p>
+                  <button onClick={()=>setView("add")} style={{
+                    marginTop:"8px",padding:"11px 28px",borderRadius:"7px",
+                    background:"#2a9d8f",color:"#fff",border:"none",
+                    cursor:"pointer",fontSize:"13px",fontWeight:700,fontFamily:"inherit"
+                  }}>+ Add Genres</button>
+                </>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+<!-- Service Worker Registration -->
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js")
+        .then(reg => console.log("SW registered:", reg.scope))
+        .catch(err => console.log("SW failed:", err));
+    });
+  }
+</script>
+</body>
+</html>
