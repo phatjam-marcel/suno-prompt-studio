@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Suno Prompt Studio</title>
+<title>MN MN Prompt Studio</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json"/>
 <meta name="theme-color" content="#d4a017"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="Prompt Studio"/>
+<meta name="apple-mobile-web-app-title" content="MN Prompt Studio"/>
 <link rel="apple-touch-icon" href="/icon-192.png"/>
 
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -36,7 +36,7 @@
 const { useState, useEffect, useCallback } = React;
 
 // ── LocalStorage DB ──────────────────────────────────────────
-const DB_KEY = "suno-prompt-studio-v1";
+const DB_KEY = "mn-prompt-studio-v1";
 function loadDB() {
   try { return JSON.parse(localStorage.getItem(DB_KEY) || "{}"); }
   catch { return {}; }
@@ -601,7 +601,7 @@ function ApiKeyModal({ onSave }) {
     }}>
       <div style={{background:"#162030",border:"1px solid #1e2d44",borderRadius:"12px",padding:"36px",maxWidth:"480px",width:"100%"}}>
         <div style={{fontSize:"28px",marginBottom:"12px",textAlign:"center"}}>🎵</div>
-        <h2 style={{fontSize:"20px",fontWeight:700,color:"#e8f0f8",textAlign:"center",marginBottom:"8px"}}>Welcome to Suno Prompt Studio</h2>
+        <h2 style={{fontSize:"20px",fontWeight:700,color:"#e8f0f8",textAlign:"center",marginBottom:"8px"}}>Welcome to MN MN Prompt Studio</h2>
         <p style={{fontSize:"13px",color:"#546a80",lineHeight:1.7,textAlign:"center",marginBottom:"24px"}}>
           To generate prompts, you need an Anthropic API key.<br/>
           Get one at <a href="https://console.anthropic.com" target="_blank" style={{color:"#d4a017"}}>console.anthropic.com</a>
@@ -636,7 +636,7 @@ function ApiKeyModal({ onSave }) {
 
 // ── Main App ─────────────────────────────────────────────────
 function App() {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("suno-api-key") || "");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("mn-api-key") || "");
   const [showApiModal, setShowApiModal] = useState(false);
   const [db, setDb] = useState(() => loadDB());
   const [view, setView] = useState("welcome");
@@ -688,7 +688,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `suno-prompt-studio-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `mn-prompt-studio-backup-${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -704,7 +704,7 @@ function App() {
       const promptCount = Object.values(data.genres).reduce((a,b)=>a+b.length,0);
       persistAndSet({ ...db, ...data.genres });
       if (data.apiKey && !apiKey) {
-        localStorage.setItem("suno-api-key", data.apiKey);
+        localStorage.setItem("mn-api-key", data.apiKey);
         setApiKey(data.apiKey);
       }
       setImportStatus(`success:Imported ${genreCount} genres and ${promptCount} prompts successfully!`);
@@ -720,7 +720,7 @@ function App() {
   const persistAndSet = (newDb) => { setDb(newDb); saveDB(newDb); };
 
   const handleSaveKey = (key) => {
-    localStorage.setItem("suno-api-key", key);
+    localStorage.setItem("mn-api-key", key);
     setApiKey(key); setShowApiModal(false);
   };
 
@@ -784,7 +784,7 @@ function App() {
           <div style={{background:"#162030",border:"1px solid #243345",borderRadius:"12px",padding:"32px",maxWidth:"460px",width:"100%"}}>
             <h2 style={{fontSize:"18px",fontWeight:700,color:"#e8f0f8",marginBottom:"8px"}}>⬆ Import Backup</h2>
             <p style={{fontSize:"13px",color:"#546a80",lineHeight:1.7,marginBottom:"20px"}}>
-              Select a backup JSON file previously exported from Suno Prompt Studio. Your existing genres will be kept — imported genres will be added or updated.
+              Select a backup JSON file previously exported from MN MN Prompt Studio. Your existing genres will be kept — imported genres will be added or updated.
             </p>
             <input type="file" accept=".json" onChange={e => {
               const file = e.target.files[0];
@@ -833,7 +833,7 @@ function App() {
             display:"flex",alignItems:"center",justifyContent:"center"
           }}>🎵</div>
           <span style={{fontWeight:700,fontSize:"15px",color:"#e8f0f8",letterSpacing:"-0.3px"}}>
-            Suno Prompt Studio
+            MN MN Prompt Studio
           </span>
         </div>
         <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
