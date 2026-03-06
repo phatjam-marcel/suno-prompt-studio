@@ -1,4 +1,4 @@
-const CACHE_NAME = "mn-prompt-studio-v1";
+const CACHE_NAME = "mn-prompt-studio-v2";
 
 const ASSETS = [
   "/mn-prompt-studio/",
