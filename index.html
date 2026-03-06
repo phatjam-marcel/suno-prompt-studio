@@ -20,10 +20,10 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body, #root { height: 100%; }
-  body { background: #0f1923; font-family: 'DM Sans', sans-serif; color: #c8d0dc; }
+  body { background: #1a2332; font-family: 'DM Sans', sans-serif; color: #c8d0dc; }
   ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: #0f1923; }
-  ::-webkit-scrollbar-thumb { background: #243345; border-radius: 3px; }
+  ::-webkit-scrollbar-track { background: #1a2332; }
+  ::-webkit-scrollbar-thumb { background: #2e4460; border-radius: 3px; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
   textarea:focus, input:focus { border-color: #d4a017 !important; outline: none; }
@@ -94,28 +94,28 @@ function PromptCard({ prompt, index, onCopy, isCopied, usageCount }) {
   const bpm = (prompt.match(/\b\d{2,3}\s*BPM\b/i) || [])[0];
   return (
     <div style={{
-      background:"#162030", border:"1px solid #1e2535", borderRadius:"8px",
+      background:"#243347", border:"1px solid #1e2535", borderRadius:"8px",
       padding:"18px 20px", display:"flex", gap:"14px", alignItems:"flex-start",
       transition:"border-color 0.2s"
     }}
       onMouseEnter={e=>e.currentTarget.style.borderColor="#d4a01755"}
-      onMouseLeave={e=>e.currentTarget.style.borderColor="#1e2f42"}
+      onMouseLeave={e=>e.currentTarget.style.borderColor="#2e4460"}
     >
       <div style={{flex:1}}>
         <div style={{display:"flex",gap:"6px",marginBottom:"10px",flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:"10px",padding:"2px 7px",background:"#1e2f42",color:"#6b8099",borderRadius:"3px",letterSpacing:"1px"}}>#{index+1}</span>
+          <span style={{fontSize:"10px",padding:"2px 7px",background:"#2e4460",color:"#8fb0cc",borderRadius:"3px",letterSpacing:"1px"}}>#{index+1}</span>
           {bpm && <span style={{fontSize:"10px",padding:"2px 7px",background:"#f59e0b22",color:"#f59e0b",border:"1px solid #f59e0b44",borderRadius:"3px",letterSpacing:"1px"}}>{bpm}</span>}
           {usageCount > 0 && (
             <span style={{fontSize:"10px",padding:"2px 8px",background:"#d4a01722",color:"#d4a017",border:"1px solid #d4a01744",borderRadius:"99px",letterSpacing:"1px",fontFamily:"'DM Mono',monospace"}}>♺ {usageCount}x</span>
           )}
         </div>
-        <p style={{fontSize:"14px",lineHeight:1.8,color:"#ccd8e4",fontFamily:"Georgia,serif"}}>{prompt}</p>
+        <p style={{fontSize:"14px",lineHeight:1.8,color:"#ddeaf5",fontFamily:"Georgia,serif"}}>{prompt}</p>
       </div>
       <button onClick={()=>onCopy(prompt)} style={{
         flexShrink:0, padding:"8px 14px", borderRadius:"6px",
-        background: isCopied?"#d4a01722":"#1a2a3e",
-        color: isCopied?"#d4a017":"#6b8099",
-        border:`1px solid ${isCopied?"#d4a017":"#243345"}`,
+        background: isCopied?"#d4a01722":"#2a3d56",
+        color: isCopied?"#d4a017":"#8fb0cc",
+        border:`1px solid ${isCopied?"#d4a017":"#354f6e"}`,
         cursor:"pointer", fontSize:"12px", fontFamily:"inherit",
         transition:"all 0.2s", whiteSpace:"nowrap"
       }}>{isCopied ? "✓ Copied" : "Copy"}</button>
@@ -265,20 +265,20 @@ function LyricsSongCard({ song, index, onCopy, copiedIndex }) {
       if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
         return <div key={i} style={{fontSize:"9px",color:"#d4a017",letterSpacing:"2px",textTransform:"uppercase",marginTop:"18px",marginBottom:"4px",fontFamily:"'DM Mono',monospace"}}>{trimmed}</div>;
       }
-      return <div key={i} style={{fontSize:"14px",lineHeight:1.8,color:"#ccd8e4",fontStyle:"italic",fontFamily:"Georgia,serif"}}>{trimmed}</div>;
+      return <div key={i} style={{fontSize:"14px",lineHeight:1.8,color:"#ddeaf5",fontStyle:"italic",fontFamily:"Georgia,serif"}}>{trimmed}</div>;
     });
   };
 
   const usageCount = getLyricsUsageCount(song.topic, song.genre, song.mood);
 
   return (
-    <div style={{background:"#162030",border:"1px solid #1e2535",borderRadius:"8px",overflow:"hidden",marginBottom:"12px"}}>
+    <div style={{background:"#243347",border:"1px solid #1e2535",borderRadius:"8px",overflow:"hidden",marginBottom:"12px"}}>
       <div style={{padding:"12px 16px",borderBottom:"1px solid #1e2535",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"10px",flexWrap:"wrap"}}>
         <div style={{minWidth:0}}>
           {song.title && (
-            <div style={{fontSize:"15px",fontWeight:700,color:"#e8f0f8",fontFamily:"Georgia,serif",fontStyle:"italic",marginBottom:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{song.title}</div>
+            <div style={{fontSize:"15px",fontWeight:700,color:"#f0f6ff",fontFamily:"Georgia,serif",fontStyle:"italic",marginBottom:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{song.title}</div>
           )}
-          <div style={{fontSize:"11px",color:"#546a80",fontFamily:"'DM Mono',monospace",letterSpacing:"0.5px"}}>
+          <div style={{fontSize:"11px",color:"#7a9ab8",fontFamily:"'DM Mono',monospace",letterSpacing:"0.5px"}}>
             Song {index + 1}{song.genre ? ` · ${song.genre}` : ""}{song.mood ? ` · ${song.mood}` : ""}
           </div>
         </div>
@@ -289,9 +289,9 @@ function LyricsSongCard({ song, index, onCopy, copiedIndex }) {
           }
           <button onClick={()=>onCopy(index)} style={{
             padding:"6px 12px",borderRadius:"5px",fontSize:"11px",
-            background:isCopied?"#d4a01722":"#1a2a3e",
-            color:isCopied?"#d4a017":"#6b8099",
-            border:`1px solid ${isCopied?"#d4a017":"#243345"}`,
+            background:isCopied?"#d4a01722":"#2a3d56",
+            color:isCopied?"#d4a017":"#8fb0cc",
+            border:`1px solid ${isCopied?"#d4a017":"#354f6e"}`,
             cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s",whiteSpace:"nowrap"
           }}>{isCopied ? "✓ Copied" : "Copy"}</button>
         </div>
@@ -308,29 +308,29 @@ function LyricsApiSetup({ geminiKey, groqKey, provider, onSave }) {
   const [q, setQ] = useState(groqKey);
   const [p, setP] = useState(provider);
   return (
-    <div style={{background:"#162030",border:"1px solid #1e2535",borderRadius:"8px",padding:"20px",marginBottom:"24px"}}>
+    <div style={{background:"#243347",border:"1px solid #1e2535",borderRadius:"8px",padding:"20px",marginBottom:"24px"}}>
       <div style={{fontSize:"11px",color:"#d4a017",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"14px",fontFamily:"'DM Mono',monospace"}}>AI Provider Setup</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"14px"}}>
         <div>
-          <label style={{fontSize:"10px",color:"#546a80",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"6px",fontFamily:"'DM Mono',monospace"}}>Gemini Flash Key</label>
+          <label style={{fontSize:"10px",color:"#7a9ab8",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"6px",fontFamily:"'DM Mono',monospace"}}>Gemini Flash Key</label>
           <input type="password" value={g} onChange={e=>setG(e.target.value)} placeholder="AIza..."
-            style={{width:"100%",background:"#0f1923",border:"1px solid #1e2d44",borderRadius:"6px",color:"#e8f0f8",padding:"9px 12px",fontSize:"12px",fontFamily:"'DM Mono',monospace"}}/>
-          <div style={{fontSize:"10px",color:"#3a4f63",marginTop:"4px"}}>Free at <a href="https://aistudio.google.com/app/apikey" target="_blank" style={{color:"#d4a017"}}>aistudio.google.com</a></div>
+            style={{width:"100%",background:"#1a2332",border:"1px solid #1e2d44",borderRadius:"6px",color:"#f0f6ff",padding:"9px 12px",fontSize:"12px",fontFamily:"'DM Mono',monospace"}}/>
+          <div style={{fontSize:"10px",color:"#5a7a96",marginTop:"4px"}}>Free at <a href="https://aistudio.google.com/app/apikey" target="_blank" style={{color:"#d4a017"}}>aistudio.google.com</a></div>
         </div>
         <div>
-          <label style={{fontSize:"10px",color:"#546a80",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"6px",fontFamily:"'DM Mono',monospace"}}>Groq Key</label>
+          <label style={{fontSize:"10px",color:"#7a9ab8",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"6px",fontFamily:"'DM Mono',monospace"}}>Groq Key</label>
           <input type="password" value={q} onChange={e=>setQ(e.target.value)} placeholder="gsk_..."
-            style={{width:"100%",background:"#0f1923",border:"1px solid #1e2d44",borderRadius:"6px",color:"#e8f0f8",padding:"9px 12px",fontSize:"12px",fontFamily:"'DM Mono',monospace"}}/>
-          <div style={{fontSize:"10px",color:"#3a4f63",marginTop:"4px"}}>Free at <a href="https://console.groq.com/keys" target="_blank" style={{color:"#d4a017"}}>console.groq.com</a></div>
+            style={{width:"100%",background:"#1a2332",border:"1px solid #1e2d44",borderRadius:"6px",color:"#f0f6ff",padding:"9px 12px",fontSize:"12px",fontFamily:"'DM Mono',monospace"}}/>
+          <div style={{fontSize:"10px",color:"#5a7a96",marginTop:"4px"}}>Free at <a href="https://console.groq.com/keys" target="_blank" style={{color:"#d4a017"}}>console.groq.com</a></div>
         </div>
       </div>
       <div style={{display:"flex",gap:"8px",marginBottom:"14px"}}>
         {["gemini","groq","auto"].map(opt=>(
           <button key={opt} onClick={()=>setP(opt)} style={{
             flex:1,padding:"7px",borderRadius:"5px",fontSize:"11px",
-            background:p===opt?"#d4a01722":"#1a2a3e",
-            color:p===opt?"#d4a017":"#6b8099",
-            border:`1px solid ${p===opt?"#d4a017":"#243345"}`,
+            background:p===opt?"#d4a01722":"#2a3d56",
+            color:p===opt?"#d4a017":"#8fb0cc",
+            border:`1px solid ${p===opt?"#d4a017":"#354f6e"}`,
             cursor:"pointer",fontFamily:"'DM Mono',monospace",letterSpacing:"1px",textTransform:"uppercase"
           }}>{opt==="gemini"?"✦ Gemini":opt==="groq"?"⚡ Groq":"↺ Auto"}</button>
         ))}
@@ -348,11 +348,11 @@ function LyricsUsageHistory() {
   const history = loadLyricsUsage();
   if (history.length === 0) return null;
   return (
-    <div style={{background:"#162030",border:"1px solid #1e2535",borderRadius:"8px",marginBottom:"24px",overflow:"hidden"}}>
+    <div style={{background:"#243347",border:"1px solid #1e2535",borderRadius:"8px",marginBottom:"24px",overflow:"hidden"}}>
       <button onClick={()=>setOpen(o=>!o)} style={{
         width:"100%",background:"none",border:"none",padding:"12px 16px",
         display:"flex",alignItems:"center",justifyContent:"space-between",
-        cursor:"pointer",color:"#6b8099",fontFamily:"'DM Mono',monospace",
+        cursor:"pointer",color:"#8fb0cc",fontFamily:"'DM Mono',monospace",
         fontSize:"10px",letterSpacing:"2px",textTransform:"uppercase"
       }}>
         <span>♺ Usage History <span style={{background:"#d4a01722",color:"#d4a017",border:"1px solid #d4a01744",borderRadius:"99px",padding:"1px 7px",marginLeft:"6px"}}>{history.length}</span></span>
@@ -363,8 +363,8 @@ function LyricsUsageHistory() {
           {history.map((h,i)=>(
             <div key={i} style={{padding:"10px 16px",borderBottom:"1px solid #0e1117",display:"flex",alignItems:"center",gap:"10px"}}>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:"13px",fontStyle:"italic",color:"#ccd8e4",fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.topic||"(no topic)"}</div>
-                <div style={{fontSize:"10px",color:"#3a4f63",fontFamily:"'DM Mono',monospace",marginTop:"2px"}}>{[h.genre,h.mood].filter(Boolean).join(" · ")||"no genre/mood"}</div>
+                <div style={{fontSize:"13px",fontStyle:"italic",color:"#ddeaf5",fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.topic||"(no topic)"}</div>
+                <div style={{fontSize:"10px",color:"#5a7a96",fontFamily:"'DM Mono',monospace",marginTop:"2px"}}>{[h.genre,h.mood].filter(Boolean).join(" · ")||"no genre/mood"}</div>
               </div>
               <span style={{fontSize:"11px",color:"#d4a017",background:"#d4a01722",border:"1px solid #d4a01744",borderRadius:"99px",padding:"2px 9px",fontFamily:"'DM Mono',monospace",flexShrink:0}}>{h.count}x</span>
             </div>
@@ -451,20 +451,20 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
   };
 
   const inputStyle = {
-    width:"100%", background:"#162030", border:"1px solid #1e2535",
-    borderRadius:"6px", color:"#ccd8e4", padding:"9px 12px",
+    width:"100%", background:"#243347", border:"1px solid #1e2535",
+    borderRadius:"6px", color:"#ddeaf5", padding:"9px 12px",
     fontSize:"13px", fontFamily:"inherit"
   };
   const labelStyle = {
-    fontSize:"10px", color:"#546a80", letterSpacing:"2px",
+    fontSize:"10px", color:"#7a9ab8", letterSpacing:"2px",
     textTransform:"uppercase", display:"block", marginBottom:"6px",
     fontFamily:"'DM Mono',monospace"
   };
   const countBtnStyle = (active) => ({
     width:"38px", height:"38px", borderRadius:"5px",
-    background: active ? "#d4a01722" : "#1a2a3e",
-    color: active ? "#d4a017" : "#6b8099",
-    border: `1px solid ${active ? "#d4a017" : "#243345"}`,
+    background: active ? "#d4a01722" : "#2a3d56",
+    color: active ? "#d4a017" : "#8fb0cc",
+    border: `1px solid ${active ? "#d4a017" : "#354f6e"}`,
     cursor:"pointer", fontSize:"13px", fontFamily:"inherit"
   });
 
@@ -472,11 +472,11 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
     <div style={{maxWidth:"680px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px",flexWrap:"wrap",gap:"10px"}}>
         <div>
-          <h2 style={{fontSize:"22px",fontWeight:700,color:"#e8f0f8",letterSpacing:"-0.5px",marginBottom:"4px"}}>Lyrics Generator</h2>
-          <p style={{color:"#546a80",fontSize:"13px",lineHeight:1.6}}>Generate full songs: 3 verses · chorus · outro · free AI</p>
+          <h2 style={{fontSize:"22px",fontWeight:700,color:"#f0f6ff",letterSpacing:"-0.5px",marginBottom:"4px"}}>Lyrics Generator</h2>
+          <p style={{color:"#7a9ab8",fontSize:"13px",lineHeight:1.6}}>Generate full songs: 3 verses · chorus · outro · free AI</p>
         </div>
         <button onClick={()=>setShowSetup(s=>!s)} style={{
-          padding:"7px 14px",borderRadius:"5px",background:"#1a2a3e",
+          padding:"7px 14px",borderRadius:"5px",background:"#2a3d56",
           color: hasKey?"#d4a017":"#f59e0b",
           border:`1px solid ${hasKey?"#d4a01744":"#f59e0b44"}`,
           cursor:"pointer",fontSize:"11px",fontFamily:"'DM Mono',monospace",letterSpacing:"1px"
@@ -493,7 +493,7 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
       <LyricsUsageHistory key={songs.length} />
 
       {/* Form */}
-      <div style={{background:"#162030",border:"1px solid #1e2535",borderRadius:"8px",padding:"22px",marginBottom:"20px"}}>
+      <div style={{background:"#243347",border:"1px solid #1e2535",borderRadius:"8px",padding:"22px",marginBottom:"20px"}}>
         <div style={{marginBottom:"16px"}}>
           <label style={labelStyle}>Song Topic / Theme</label>
           <input value={topic} onChange={e=>setTopic(e.target.value)} placeholder="e.g. a midnight train journey, lost love…" style={inputStyle}/>
@@ -517,7 +517,7 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
           </div>
         </div>
         <div style={{borderTop:"1px solid #1e2535",paddingTop:"16px",marginBottom:"16px"}}>
-          <div style={{fontSize:"10px",color:"#3a4f63",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:"12px"}}>Language Settings</div>
+          <div style={{fontSize:"10px",color:"#5a7a96",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:"12px"}}>Language Settings</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"12px"}}>
             <div>
               <label style={labelStyle}>Primary Language</label>
@@ -541,26 +541,26 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
         </div>
 
         {generating && (
-          <div style={{height:"3px",background:"#1e2f42",borderRadius:"2px",marginBottom:"10px",overflow:"hidden"}}>
+          <div style={{height:"3px",background:"#2e4460",borderRadius:"2px",marginBottom:"10px",overflow:"hidden"}}>
             <div style={{height:"100%",background:"#d4a017",borderRadius:"2px",width:`${progress}%`,transition:"width 0.4s ease"}}/>
           </div>
         )}
         {status && (
-          <div style={{fontSize:"12px",color:statusType==="error"?"#ef4444":statusType==="success"?"#22c55e":"#6b8099",marginBottom:"12px",fontFamily:"'DM Mono',monospace"}}>{status}</div>
+          <div style={{fontSize:"12px",color:statusType==="error"?"#ef4444":statusType==="success"?"#22c55e":"#8fb0cc",marginBottom:"12px",fontFamily:"'DM Mono',monospace"}}>{status}</div>
         )}
 
         <div style={{display:"flex",gap:"10px"}}>
           <button onClick={handleGenerate} disabled={generating} style={{
             flex:1, padding:"11px", borderRadius:"7px",
-            background:generating?"#1a2a3e":"#d4a017",
-            color:generating?"#3a4f63":"#fff",
+            background:generating?"#2a3d56":"#d4a017",
+            color:generating?"#5a7a96":"#fff",
             border:"none", cursor:generating?"default":"pointer",
             fontSize:"13px", fontWeight:700, fontFamily:"inherit"
           }}>{generating ? "Generating…" : "✦ Generate Lyrics"}</button>
           {songs.length > 1 && (
             <button onClick={handleCopyAll} style={{
-              padding:"11px 18px",borderRadius:"7px",background:"#1a2a3e",
-              color:"#9db4c8",border:"1px solid #1e2d44",
+              padding:"11px 18px",borderRadius:"7px",background:"#2a3d56",
+              color:"#b8d0e8",border:"1px solid #1e2d44",
               cursor:"pointer",fontSize:"12px",fontFamily:"inherit",fontWeight:600
             }}>Copy All</button>
           )}
@@ -570,7 +570,7 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
       {/* Results */}
       {songs.length > 0 && (
         <div>
-          <div style={{fontSize:"10px",color:"#3a4f63",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:"14px"}}>Generated Lyrics</div>
+          <div style={{fontSize:"10px",color:"#5a7a96",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:"14px"}}>Generated Lyrics</div>
           {songs.map((s,i) => (
             <LyricsSongCard key={i} song={s} index={i} onCopy={handleCopy} copiedIndex={copiedIndex}/>
           ))}
@@ -585,14 +585,14 @@ function InstallBanner({ onInstall, onDismiss }) {
   return (
     <div style={{
       position:"fixed", bottom:"20px", left:"50%", transform:"translateX(-50%)",
-      background:"#162030", border:"1px solid #d4a017", borderRadius:"10px",
+      background:"#243347", border:"1px solid #d4a017", borderRadius:"10px",
       padding:"14px 20px", display:"flex", alignItems:"center", gap:"14px",
       boxShadow:"0 8px 32px #000a", zIndex:100, whiteSpace:"nowrap"
     }}>
       <span style={{fontSize:"20px"}}>📲</span>
       <div>
-        <div style={{fontSize:"13px",fontWeight:700,color:"#e8f0f8"}}>Install as App</div>
-        <div style={{fontSize:"11px",color:"#546a80"}}>Add to your home screen for quick access</div>
+        <div style={{fontSize:"13px",fontWeight:700,color:"#f0f6ff"}}>Install as App</div>
+        <div style={{fontSize:"11px",color:"#7a9ab8"}}>Add to your home screen for quick access</div>
       </div>
       <button onClick={onInstall} style={{
         padding:"8px 16px", borderRadius:"6px", background:"#d4a017",
@@ -600,7 +600,7 @@ function InstallBanner({ onInstall, onDismiss }) {
         fontWeight:700, fontFamily:"inherit"
       }}>Install</button>
       <button onClick={onDismiss} style={{
-        background:"none", border:"none", color:"#546a80",
+        background:"none", border:"none", color:"#7a9ab8",
         cursor:"pointer", fontSize:"18px", lineHeight:1, padding:"4px"
       }}>×</button>
     </div>
@@ -636,36 +636,36 @@ function ApiKeyModal({ onSave }) {
 
   return (
     <div style={{
-      position:"fixed",inset:0,background:"#0f1923ee",display:"flex",
+      position:"fixed",inset:0,background:"#1a2332ee",display:"flex",
       alignItems:"center",justifyContent:"center",zIndex:999,padding:"20px"
     }}>
-      <div style={{background:"#162030",border:"1px solid #1e2d44",borderRadius:"12px",padding:"36px",maxWidth:"480px",width:"100%"}}>
+      <div style={{background:"#243347",border:"1px solid #1e2d44",borderRadius:"12px",padding:"36px",maxWidth:"480px",width:"100%"}}>
         <div style={{fontSize:"28px",marginBottom:"12px",textAlign:"center"}}>🎵</div>
-        <h2 style={{fontSize:"20px",fontWeight:700,color:"#e8f0f8",textAlign:"center",marginBottom:"8px"}}>Welcome to MN Prompt Studio</h2>
-        <p style={{fontSize:"13px",color:"#546a80",lineHeight:1.7,textAlign:"center",marginBottom:"24px"}}>
+        <h2 style={{fontSize:"20px",fontWeight:700,color:"#f0f6ff",textAlign:"center",marginBottom:"8px"}}>Welcome to MN Prompt Studio</h2>
+        <p style={{fontSize:"13px",color:"#7a9ab8",lineHeight:1.7,textAlign:"center",marginBottom:"24px"}}>
           To generate prompts, you need an Anthropic API key.<br/>
           Get one at <a href="https://console.anthropic.com" target="_blank" style={{color:"#d4a017"}}>console.anthropic.com</a>
           &nbsp;→ API Keys → Create Key.
         </p>
-        <label style={{fontSize:"11px",color:"#6b8099",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"8px"}}>Your API Key</label>
+        <label style={{fontSize:"11px",color:"#8fb0cc",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"8px"}}>Your API Key</label>
         <input
           type="password" value={key} onChange={e=>setKey(e.target.value)}
           placeholder="sk-ant-api03-..."
           onKeyDown={e=>e.key==="Enter"&&handleSave()}
           style={{
-            width:"100%",background:"#0f1923",border:"1px solid #1e2d44",
-            borderRadius:"7px",color:"#e8f0f8",padding:"12px 14px",
+            width:"100%",background:"#1a2332",border:"1px solid #1e2d44",
+            borderRadius:"7px",color:"#f0f6ff",padding:"12px 14px",
             fontSize:"14px",fontFamily:"'DM Mono',monospace",marginBottom:"8px"
           }}
         />
         {error && <p style={{color:"#ef4444",fontSize:"12px",marginBottom:"10px"}}>{error}</p>}
-        <p style={{fontSize:"11px",color:"#3a4f63",lineHeight:1.6,marginBottom:"20px"}}>
+        <p style={{fontSize:"11px",color:"#5a7a96",lineHeight:1.6,marginBottom:"20px"}}>
           🔒 Your key is saved only on this device in local storage. It is never sent anywhere except directly to Anthropic.
         </p>
         <button onClick={handleSave} disabled={!key.trim()||testing} style={{
           width:"100%",padding:"12px",borderRadius:"7px",
-          background:!key.trim()?"#1a2a3e":"#d4a017",
-          color:!key.trim()?"#3a4f63":"#fff",
+          background:!key.trim()?"#2a3d56":"#d4a017",
+          color:!key.trim()?"#5a7a96":"#fff",
           border:"none",cursor:!key.trim()?"default":"pointer",
           fontSize:"14px",fontWeight:700,fontFamily:"inherit"
         }}>{testing?"Verifying…":"Save & Continue"}</button>
@@ -820,12 +820,12 @@ function App() {
       {showApiModal && <ApiKeyModal onSave={handleSaveKey}/>}
       {showImportModal && (
         <div style={{
-          position:"fixed",inset:0,background:"#0f1923ee",display:"flex",
+          position:"fixed",inset:0,background:"#1a2332ee",display:"flex",
           alignItems:"center",justifyContent:"center",zIndex:999,padding:"20px"
         }}>
-          <div style={{background:"#162030",border:"1px solid #243345",borderRadius:"12px",padding:"32px",maxWidth:"460px",width:"100%"}}>
-            <h2 style={{fontSize:"18px",fontWeight:700,color:"#e8f0f8",marginBottom:"8px"}}>⬆ Import Backup</h2>
-            <p style={{fontSize:"13px",color:"#546a80",lineHeight:1.7,marginBottom:"20px"}}>
+          <div style={{background:"#243347",border:"1px solid #243345",borderRadius:"12px",padding:"32px",maxWidth:"460px",width:"100%"}}>
+            <h2 style={{fontSize:"18px",fontWeight:700,color:"#f0f6ff",marginBottom:"8px"}}>⬆ Import Backup</h2>
+            <p style={{fontSize:"13px",color:"#7a9ab8",lineHeight:1.7,marginBottom:"20px"}}>
               Select a backup JSON file previously exported from MN Prompt Studio. Your existing genres will be kept — imported genres will be added or updated.
             </p>
             <input type="file" accept=".json" onChange={e => {
@@ -835,8 +835,8 @@ function App() {
               reader.onload = ev => handleImport(ev.target.result);
               reader.readAsText(file);
             }} style={{
-              width:"100%",background:"#0f1923",border:"1px solid #1e2f42",
-              borderRadius:"7px",color:"#ccd8e4",padding:"10px 12px",
+              width:"100%",background:"#1a2332",border:"1px solid #1e2f42",
+              borderRadius:"7px",color:"#ddeaf5",padding:"10px 12px",
               fontSize:"13px",fontFamily:"inherit",marginBottom:"12px",cursor:"pointer"
             }}/>
             {importStatus && (
@@ -849,8 +849,8 @@ function App() {
             )}
             <div style={{display:"flex",gap:"10px",justifyContent:"flex-end"}}>
               <button onClick={()=>{setShowImportModal(false);setImportStatus("");}} style={{
-                padding:"9px 20px",borderRadius:"6px",background:"#1a2a3e",
-                color:"#6b8099",border:"1px solid #243345",
+                padding:"9px 20px",borderRadius:"6px",background:"#2a3d56",
+                color:"#8fb0cc",border:"1px solid #243345",
                 cursor:"pointer",fontSize:"13px",fontFamily:"inherit"
               }}>Cancel</button>
             </div>
@@ -865,7 +865,7 @@ function App() {
       {/* Header */}
       <header style={{
         display:"flex",alignItems:"center",justifyContent:"space-between",
-        padding:"0 24px",height:"54px",background:"#111d2b",
+        padding:"0 24px",height:"54px",background:"#1e2a3a",
         borderBottom:"1px solid #141c2e",flexShrink:0
       }}>
         <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
@@ -874,7 +874,7 @@ function App() {
             background:"linear-gradient(135deg,#d4a017,#264653)",
             display:"flex",alignItems:"center",justifyContent:"center"
           }}>🎵</div>
-          <span style={{fontWeight:700,fontSize:"15px",color:"#e8f0f8",letterSpacing:"-0.3px"}}>
+          <span style={{fontWeight:700,fontSize:"15px",color:"#f0f6ff",letterSpacing:"-0.3px"}}>
             MN Prompt Studio
           </span>
         </div>
@@ -882,7 +882,7 @@ function App() {
           {anyGenerating && (
             <span style={{fontSize:"11px",color:"#f59e0b",letterSpacing:"1px",animation:"pulse 1s infinite"}}>● GENERATING…</span>
           )}
-          <span style={{fontSize:"11px",color:"#3a4f63",letterSpacing:"1px"}}>
+          <span style={{fontSize:"11px",color:"#5a7a96",letterSpacing:"1px"}}>
             {genres.length} GENRES · {totalPrompts} PROMPTS
           </span>
           {installPrompt && (
@@ -893,17 +893,17 @@ function App() {
             }}>📲 Install App</button>
           )}
           <button onClick={handleExport} title="Export all genres & prompts as a backup file" style={{
-            padding:"5px 12px",borderRadius:"5px",background:"#1a2a3e",
-            color:"#6b8099",border:"1px solid #243345",
+            padding:"5px 12px",borderRadius:"5px",background:"#2a3d56",
+            color:"#8fb0cc",border:"1px solid #243345",
             cursor:"pointer",fontSize:"11px",fontFamily:"inherit",letterSpacing:"1px"
           }}>⬇ Export</button>
           <button onClick={()=>{setShowImportModal(true);setImportStatus("");}} style={{
-            padding:"5px 12px",borderRadius:"5px",background:"#1a2a3e",
-            color:"#6b8099",border:"1px solid #243345",
+            padding:"5px 12px",borderRadius:"5px",background:"#2a3d56",
+            color:"#8fb0cc",border:"1px solid #243345",
             cursor:"pointer",fontSize:"11px",fontFamily:"inherit",letterSpacing:"1px"
           }}>⬆ Import</button>
           <button onClick={()=>setShowApiModal(true)} style={{
-            padding:"5px 12px",borderRadius:"5px",background:"#1a2a3e",
+            padding:"5px 12px",borderRadius:"5px",background:"#2a3d56",
             color:apiKey?"#d4a017":"#f59e0b",
             border:`1px solid ${apiKey?"#d4a01744":"#f59e0b44"}`,
             cursor:"pointer",fontSize:"11px",fontFamily:"inherit",letterSpacing:"1px"
@@ -914,16 +914,16 @@ function App() {
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
         {/* Sidebar */}
         <nav style={{
-          width:"220px",flexShrink:0,background:"#111d2b",
+          width:"220px",flexShrink:0,background:"#1e2a3a",
           borderRight:"1px solid #141c2e",display:"flex",
           flexDirection:"column",overflowY:"auto"
         }}>
           <div style={{padding:"14px 12px 8px"}}>
             <button onClick={()=>setView("add")} style={{
               width:"100%",padding:"9px 12px",borderRadius:"7px",
-              background:view==="add"?"#d4a017":"#1a2a3e",
-              color:view==="add"?"#fff":"#9db4c8",
-              border:`1px solid ${view==="add"?"#d4a017":"#243345"}`,
+              background:view==="add"?"#d4a017":"#2a3d56",
+              color:view==="add"?"#fff":"#b8d0e8",
+              border:`1px solid ${view==="add"?"#d4a017":"#354f6e"}`,
               cursor:"pointer",fontSize:"13px",fontWeight:600,
               fontFamily:"inherit",textAlign:"left",
               display:"flex",alignItems:"center",gap:"8px"
@@ -934,9 +934,9 @@ function App() {
           <div style={{padding:"6px 12px 0"}}>
             <button onClick={()=>setView("lyrics")} style={{
               width:"100%",padding:"9px 12px",borderRadius:"7px",
-              background:view==="lyrics"?"#d4a017":"#1a2a3e",
-              color:view==="lyrics"?"#fff":"#9db4c8",
-              border:`1px solid ${view==="lyrics"?"#d4a017":"#243345"}`,
+              background:view==="lyrics"?"#d4a017":"#2a3d56",
+              color:view==="lyrics"?"#fff":"#b8d0e8",
+              border:`1px solid ${view==="lyrics"?"#d4a017":"#354f6e"}`,
               cursor:"pointer",fontSize:"13px",fontWeight:600,
               fontFamily:"inherit",textAlign:"left",
               display:"flex",alignItems:"center",gap:"8px"
@@ -945,17 +945,17 @@ function App() {
             </button>
           </div>
           <div style={{padding:"8px 16px 4px",marginTop:"8px"}}>
-            <span style={{fontSize:"10px",color:"#3a4f63",letterSpacing:"2px",textTransform:"uppercase"}}>Library</span>
+            <span style={{fontSize:"10px",color:"#5a7a96",letterSpacing:"2px",textTransform:"uppercase"}}>Library</span>
           </div>
           {genres.length===0 && (
-            <p style={{fontSize:"12px",color:"#3a4f63",padding:"12px 16px",lineHeight:1.6}}>No genres yet.</p>
+            <p style={{fontSize:"12px",color:"#5a7a96",padding:"12px 16px",lineHeight:1.6}}>No genres yet.</p>
           )}
           {genres.map(genre=>(
             <div key={genre} style={{position:"relative",display:"flex",alignItems:"center"}}>
               <button onClick={()=>openGenre(genre)} style={{
                 flex:1,textAlign:"left",padding:"9px 36px 9px 14px",
-                background:activeGenre===genre&&view==="prompts"?"#162030":"transparent",
-                color:activeGenre===genre&&view==="prompts"?"#e8f0f8":"#6b8099",
+                background:activeGenre===genre&&view==="prompts"?"#243347":"transparent",
+                color:activeGenre===genre&&view==="prompts"?"#f0f6ff":"#8fb0cc",
                 border:"none",
                 borderLeft:`3px solid ${activeGenre===genre&&view==="prompts"?"#d4a017":"transparent"}`,
                 cursor:"pointer",fontSize:"13px",fontFamily:"inherit",
@@ -963,12 +963,12 @@ function App() {
               }}>
                 {generating[genre]
                   ? <span style={{color:"#f59e0b"}}>⟳ {genre}</span>
-                  : <>{genre} <span style={{float:"right",fontSize:"10px",color:"#3a4f63",marginRight:"4px"}}>{(db[genre]||[]).length}</span></>
+                  : <>{genre} <span style={{float:"right",fontSize:"10px",color:"#5a7a96",marginRight:"4px"}}>{(db[genre]||[]).length}</span></>
                 }
               </button>
               <button onClick={()=>handleDeleteGenre(genre)} title="Delete" style={{
                 position:"absolute",right:"6px",background:"none",border:"none",
-                color:"#3a4f63",cursor:"pointer",fontSize:"15px",padding:"4px",lineHeight:1,
+                color:"#5a7a96",cursor:"pointer",fontSize:"15px",padding:"4px",lineHeight:1,
                 opacity:0,transition:"opacity 0.15s"
               }}
                 onMouseEnter={e=>e.target.style.opacity=1}
@@ -989,17 +989,17 @@ function App() {
 
           {view==="add" && (
             <div style={{maxWidth:"580px"}}>
-              <h2 style={{fontSize:"22px",fontWeight:700,color:"#e8f0f8",marginBottom:"6px"}}>Add Genres</h2>
-              <p style={{color:"#546a80",fontSize:"13px",lineHeight:1.7,marginBottom:"22px"}}>
-                Paste your full genre list — one per line. Claude generates <strong style={{color:"#e8f0f8"}}>20 comprehensive Suno-ready prompts</strong> per genre and saves them permanently to this device.
+              <h2 style={{fontSize:"22px",fontWeight:700,color:"#f0f6ff",marginBottom:"6px"}}>Add Genres</h2>
+              <p style={{color:"#7a9ab8",fontSize:"13px",lineHeight:1.7,marginBottom:"22px"}}>
+                Paste your full genre list — one per line. Claude generates <strong style={{color:"#f0f6ff"}}>20 comprehensive Suno-ready prompts</strong> per genre and saves them permanently to this device.
               </p>
               <textarea
                 value={genreInput} onChange={e=>setGenreInput(e.target.value)}
                 placeholder={"Lo-Fi Hip Hop\nDark Techno\nDoom Metal\nAfrobeats\nNeo-Soul\n..."}
                 rows={10}
                 style={{
-                  width:"100%",background:"#162030",border:"1px solid #1e2d44",
-                  borderRadius:"8px",color:"#ccd8e4",padding:"14px 16px",
+                  width:"100%",background:"#243347",border:"1px solid #1e2d44",
+                  borderRadius:"8px",color:"#ddeaf5",padding:"14px 16px",
                   fontSize:"14px",fontFamily:"'DM Mono',monospace",lineHeight:1.7,
                   resize:"vertical",display:"block",marginBottom:"12px"
                 }}
@@ -1007,12 +1007,12 @@ function App() {
               <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
                 <button onClick={handleGenerate} disabled={!genreCount||anyGenerating} style={{
                   padding:"11px 26px",borderRadius:"7px",
-                  background:genreCount&&!anyGenerating?"#d4a017":"#1a2a3e",
-                  color:genreCount&&!anyGenerating?"#fff":"#3a4f63",
+                  background:genreCount&&!anyGenerating?"#d4a017":"#2a3d56",
+                  color:genreCount&&!anyGenerating?"#fff":"#5a7a96",
                   border:"none",cursor:genreCount&&!anyGenerating?"pointer":"default",
                   fontSize:"13px",fontWeight:700,fontFamily:"inherit"
                 }}>Generate &amp; Save All</button>
-                <span style={{fontSize:"12px",color:"#3a4f63"}}>{genreCount} genre{genreCount!==1?"s":""} detected</span>
+                <span style={{fontSize:"12px",color:"#5a7a96"}}>{genreCount} genre{genreCount!==1?"s":""} detected</span>
               </div>
             </div>
           )}
@@ -1022,19 +1022,19 @@ function App() {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"12px",marginBottom:"22px"}}>
                 <div>
                   <div style={{fontSize:"10px",color:"#d4a017",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"4px"}}>Genre</div>
-                  <h2 style={{fontSize:"26px",fontWeight:700,color:"#e8f0f8",letterSpacing:"-0.5px"}}>{activeGenre}</h2>
-                  <div style={{fontSize:"12px",color:"#3a4f63",marginTop:"4px"}}>
+                  <h2 style={{fontSize:"26px",fontWeight:700,color:"#f0f6ff",letterSpacing:"-0.5px"}}>{activeGenre}</h2>
+                  <div style={{fontSize:"12px",color:"#5a7a96",marginTop:"4px"}}>
                     {filteredPrompts.length} prompt{filteredPrompts.length!==1?"s":""}
                     {filter && ` matching "${filter}"`}
                   </div>
                 </div>
                 <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
                   <button onClick={()=>handleRegenerate(activeGenre)} disabled={generating[activeGenre]} style={{
-                    padding:"9px 16px",borderRadius:"7px",background:"#1a2a3e",color:"#9db4c8",
+                    padding:"9px 16px",borderRadius:"7px",background:"#2a3d56",color:"#b8d0e8",
                     border:"1px solid #1e2d44",cursor:"pointer",fontSize:"12px",fontFamily:"inherit",fontWeight:600
                   }}>{generating[activeGenre]?"Regenerating…":"⟳ Regenerate"}</button>
                   <button onClick={()=>{ try{navigator.clipboard.writeText(filteredPrompts.join("\n\n---\n\n"));}catch{} }} style={{
-                    padding:"9px 16px",borderRadius:"7px",background:"#1a2a3e",color:"#9db4c8",
+                    padding:"9px 16px",borderRadius:"7px",background:"#2a3d56",color:"#b8d0e8",
                     border:"1px solid #1e2d44",cursor:"pointer",fontSize:"12px",fontFamily:"inherit",fontWeight:600
                   }}>Copy All</button>
                 </div>
@@ -1042,8 +1042,8 @@ function App() {
               <input type="text" placeholder="Filter prompts by keyword…"
                 value={filter} onChange={e=>setFilter(e.target.value)}
                 style={{
-                  width:"100%",maxWidth:"380px",background:"#162030",border:"1px solid #1e2535",
-                  borderRadius:"7px",color:"#ccd8e4",padding:"9px 14px",fontSize:"13px",
+                  width:"100%",maxWidth:"380px",background:"#243347",border:"1px solid #1e2535",
+                  borderRadius:"7px",color:"#ddeaf5",padding:"9px 14px",fontSize:"13px",
                   fontFamily:"inherit",display:"block",marginBottom:"18px"
                 }}
               />
@@ -1056,7 +1056,7 @@ function App() {
                   {filteredPrompts.map((p,i)=>(
                     <PromptCard key={i} prompt={p} index={i} onCopy={handleCopy} isCopied={copiedText===p} usageCount={getPromptUsageCount(p)}/>
                   ))}
-                  {filteredPrompts.length===0&&<p style={{color:"#3a4f63",fontSize:"14px",padding:"20px 0"}}>No prompts match your filter.</p>}
+                  {filteredPrompts.length===0&&<p style={{color:"#5a7a96",fontSize:"14px",padding:"20px 0"}}>No prompts match your filter.</p>}
                 </div>
               )}
             </div>
@@ -1077,15 +1077,15 @@ function App() {
                 <>
                   <div style={{fontSize:"40px",animation:"spin 1.5s linear infinite",display:"inline-block"}}>⟳</div>
                   <div style={{color:"#f59e0b",fontSize:"14px",letterSpacing:"1px"}}>Generating & saving prompts…</div>
-                  <div style={{color:"#3a4f63",fontSize:"12px"}}>{Object.entries(generating).filter(([,v])=>v).map(([k])=>k).join(", ")}</div>
+                  <div style={{color:"#5a7a96",fontSize:"12px"}}>{Object.entries(generating).filter(([,v])=>v).map(([k])=>k).join(", ")}</div>
                 </>
               ) : genres.length > 0 ? (
-                <><div style={{fontSize:"40px"}}>🎛️</div><div style={{color:"#546a80",fontSize:"15px"}}>Select a genre from the sidebar</div></>
+                <><div style={{fontSize:"40px"}}>🎛️</div><div style={{color:"#7a9ab8",fontSize:"15px"}}>Select a genre from the sidebar</div></>
               ) : (
                 <>
                   <div style={{fontSize:"52px"}}>🎵</div>
-                  <div style={{fontSize:"20px",fontWeight:700,color:"#e8f0f8"}}>Your prompt library is empty</div>
-                  <p style={{color:"#546a80",fontSize:"13px",maxWidth:"360px",lineHeight:1.7}}>
+                  <div style={{fontSize:"20px",fontWeight:700,color:"#f0f6ff"}}>Your prompt library is empty</div>
+                  <p style={{color:"#7a9ab8",fontSize:"13px",maxWidth:"360px",lineHeight:1.7}}>
                     Click <strong style={{color:"#d4a017"}}>Add Genres</strong>, paste your list, and Claude will generate 20 rich Suno-ready prompts per genre — saved on this device forever.
                   </p>
                   <button onClick={()=>setView("add")} style={{
