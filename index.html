@@ -162,12 +162,19 @@ function saveLyricsUsage(data) {
 function getLyricsUsageKey(topic, genre, mood) {
   return [topic, genre, mood].map(s => (s||"").toLowerCase().trim()).join("|");
 }
-function incrementLyricsUsage(topic, genre, mood) {
+function incrementLyricsUsage(topic, genre, mood, title, lyrics) {
   const history = loadLyricsUsage();
   const key = getLyricsUsageKey(topic, genre, mood);
   const existing = history.find(h => h.key === key);
-  if (existing) { existing.count++; existing.lastUsed = Date.now(); }
-  else { history.unshift({ key, topic, genre, mood, count: 1, lastUsed: Date.now() }); }
+  if (existing) {
+    existing.count++;
+    existing.lastUsed = Date.now();
+    // Save the latest lyrics/title version
+    if (title) existing.title = title;
+    if (lyrics) existing.lyrics = lyrics;
+  } else {
+    history.unshift({ key, topic, genre, mood, title: title||"", lyrics: lyrics||"", count: 1, lastUsed: Date.now() });
+  }
   saveLyricsUsage(history);
   return existing ? existing.count : 1;
 }
@@ -345,32 +352,82 @@ function LyricsApiSetup({ geminiKey, groqKey, provider, onSave }) {
 
 function LyricsUsageHistory() {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+  const [copied, setCopied] = useState(null);
   const history = loadLyricsUsage();
   if (history.length === 0) return null;
+
+  const handleViewCopy = (h, i) => {
+    const text = h.title ? `${h.title}\n\n${h.lyrics}` : h.lyrics;
+    try { navigator.clipboard.writeText(text); } catch {}
+    setCopied(i);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const renderLyrics = (lyrics) => {
+    if (!lyrics) return <div style={{color:"#94a3b8",fontSize:"13px",fontStyle:"italic"}}>No lyrics saved yet — copy a song to save it here.</div>;
+    return lyrics.split("\n").map((line, i) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={i} style={{height:"6px"}}/>;
+      if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+        return <div key={i} style={{fontSize:"9px",color:"#6366f1",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginTop:"14px",marginBottom:"3px"}}>{trimmed}</div>;
+      }
+      return <div key={i} style={{fontSize:"13px",lineHeight:1.8,color:"#334155",fontStyle:"italic",fontFamily:"Georgia,serif"}}>{trimmed}</div>;
+    });
+  };
+
   return (
-    <div style={{background:"#fff",border:"1px solid #1e2535",borderRadius:"8px",marginBottom:"24px",overflow:"hidden"}}>
+    <div style={{background:"#fff",border:"1px solid #dbd5cd",borderRadius:"8px",marginBottom:"24px",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
       <button onClick={()=>setOpen(o=>!o)} style={{
         width:"100%",background:"none",border:"none",padding:"12px 16px",
         display:"flex",alignItems:"center",justifyContent:"space-between",
         cursor:"pointer",color:"#475569",fontFamily:"'DM Mono',monospace",
         fontSize:"10px",letterSpacing:"2px",textTransform:"uppercase"
       }}>
-        <span>♺ Usage History <span style={{background:"#eff6ff",color:"#6366f1",border:"1px solid #d4a01744",borderRadius:"99px",padding:"1px 7px",marginLeft:"6px"}}>{history.length}</span></span>
-        <span>{open?"▲":"▼"}</span>
+        <span>♺ Saved Lyrics <span style={{background:"#eff6ff",color:"#6366f1",border:"1px solid #c7d2fe",borderRadius:"99px",padding:"1px 7px",marginLeft:"6px"}}>{history.length}</span></span>
+        <span style={{color:"#94a3b8"}}>{open?"▲":"▼"}</span>
       </button>
       {open && (
-        <div style={{borderTop:"1px solid #f0ece6",maxHeight:"220px",overflowY:"auto"}}>
+        <div style={{borderTop:"1px solid #f0ece6"}}>
           {history.map((h,i)=>(
-            <div key={i} style={{padding:"10px 16px",borderBottom:"1px solid #0e1117",display:"flex",alignItems:"center",gap:"10px"}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:"13px",fontStyle:"italic",color:"#1e293b",fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.topic||"(no topic)"}</div>
-                <div style={{fontSize:"10px",color:"#94a3b8",fontFamily:"'DM Mono',monospace",marginTop:"2px"}}>{[h.genre,h.mood].filter(Boolean).join(" · ")||"no genre/mood"}</div>
+            <div key={i} style={{borderBottom:"1px solid #f0ece6"}}>
+              {/* Row header */}
+              <div
+                onClick={()=>setExpanded(expanded===i?null:i)}
+                style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:"10px",cursor:"pointer",background:expanded===i?"#f9f7f4":"transparent",transition:"background 0.15s"}}
+              >
+                <div style={{flex:1,minWidth:0}}>
+                  {h.title && <div style={{fontSize:"14px",fontWeight:600,color:"#1e293b",fontFamily:"Georgia,serif",fontStyle:"italic",marginBottom:"2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.title}</div>}
+                  <div style={{fontSize:"12px",fontStyle:h.title?"normal":"italic",color:h.title?"#64748b":"#1e293b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.topic||"(no topic)"}</div>
+                  <div style={{fontSize:"10px",color:"#94a3b8",fontFamily:"'DM Mono',monospace",marginTop:"2px"}}>{[h.genre,h.mood].filter(Boolean).join(" · ")||"no genre/mood"}</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"8px",flexShrink:0}}>
+                  <span style={{fontSize:"11px",color:"#6366f1",background:"#eff6ff",border:"1px solid #c7d2fe",borderRadius:"99px",padding:"2px 9px",fontFamily:"'DM Mono',monospace"}}>{h.count}x</span>
+                  <span style={{fontSize:"11px",color:"#94a3b8"}}>{expanded===i?"▲":"▼"}</span>
+                </div>
               </div>
-              <span style={{fontSize:"11px",color:"#6366f1",background:"#eff6ff",border:"1px solid #d4a01744",borderRadius:"99px",padding:"2px 9px",fontFamily:"'DM Mono',monospace",flexShrink:0}}>{h.count}x</span>
+              {/* Expanded lyrics */}
+              {expanded===i && (
+                <div style={{padding:"16px 18px",background:"#f9f7f4",borderTop:"1px solid #f0ece6"}}>
+                  {renderLyrics(h.lyrics)}
+                  <div style={{marginTop:"16px",display:"flex",justifyContent:"flex-end"}}>
+                    <button
+                      onClick={(e)=>{e.stopPropagation();handleViewCopy(h,i);}}
+                      style={{
+                        padding:"7px 16px",borderRadius:"6px",fontSize:"12px",fontFamily:"inherit",fontWeight:600,
+                        background:copied===i?"#eff6ff":"#fff",
+                        color:copied===i?"#6366f1":"#64748b",
+                        border:`1px solid ${copied===i?"#6366f1":"#d6d0c8"}`,
+                        cursor:"pointer"
+                      }}
+                    >{copied===i?"✓ Copied":"Copy Lyrics"}</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
-          <div style={{padding:"8px 16px",borderTop:"1px solid #f0ece6",textAlign:"right"}}>
-            <button onClick={()=>{if(confirm("Clear all lyrics usage history?")){localStorage.removeItem(LYRICS_USAGE_KEY);window.location.reload();}}} style={{background:"none",border:"1px solid #ef444433",borderRadius:"4px",color:"#ef444466",fontSize:"10px",padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Mono',monospace",letterSpacing:"1px",textTransform:"uppercase"}}>Clear</button>
+          <div style={{padding:"10px 16px",display:"flex",justifyContent:"flex-end"}}>
+            <button onClick={()=>{if(confirm("Clear all saved lyrics history?")){localStorage.removeItem(LYRICS_USAGE_KEY);window.location.reload();}}} style={{background:"none",border:"1px solid #fca5a5",borderRadius:"4px",color:"#f87171",fontSize:"10px",padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Mono',monospace",letterSpacing:"1px",textTransform:"uppercase"}}>Clear All</button>
           </div>
         </div>
       )}
@@ -436,7 +493,7 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
     const song = songs[index];
     const copyText = song.title ? `${song.title}\n\n${song.lyrics}` : song.lyrics;
     try { navigator.clipboard.writeText(copyText); } catch {}
-    incrementLyricsUsage(song.topic, song.genre, song.mood);
+    incrementLyricsUsage(song.topic, song.genre, song.mood, song.title, song.lyrics);
     setCopiedIndex(index);
     forceUpdate(n => n + 1);
     setTimeout(() => setCopiedIndex(null), 2000);
@@ -445,7 +502,7 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
   const handleCopyAll = () => {
     const all = songs.map((s,i) => `=== SONG ${i+1}${s.title ? `: ${s.title}` : ""} ===\n\n${s.lyrics}`).join("\n\n\n");
     try { navigator.clipboard.writeText(all); } catch {}
-    songs.forEach(s => incrementLyricsUsage(s.topic, s.genre, s.mood));
+    songs.forEach(s => incrementLyricsUsage(s.topic, s.genre, s.mood, s.title, s.lyrics));
     forceUpdate(n => n + 1);
     setStatus("✓ All songs copied."); setStatusType("success");
   };
