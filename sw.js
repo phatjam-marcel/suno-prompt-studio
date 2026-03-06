@@ -1,11 +1,11 @@
-const CACHE_NAME = "suno-prompt-studio-v5";
+const CACHE_NAME = "mn-prompt-studio-v1";
 
 const ASSETS = [
-  "/suno-prompt-studio/",
-  "/suno-prompt-studio/index.html",
-  "/suno-prompt-studio/manifest.json",
-  "/suno-prompt-studio/icon-192.png",
-  "/suno-prompt-studio/icon-512.png"
+  "/mn-prompt-studio/",
+  "/mn-prompt-studio/index.html",
+  "/mn-prompt-studio/manifest.json",
+  "/mn-prompt-studio/icon-192.png",
+  "/mn-prompt-studio/icon-512.png"
 ];
 
 self.addEventListener("install", event => {
@@ -50,7 +50,7 @@ self.addEventListener("fetch", event => {
         return response;
       }).catch(() => {
         if (event.request.destination === "document") {
-          return caches.match("/suno-prompt-studio/index.html");
+          return caches.match("/mn-prompt-studio/index.html");
         }
       });
     })
