@@ -120,6 +120,427 @@ function PromptCard({ prompt, index, onCopy, isCopied }) {
   );
 }
 
+
+// ── Lyrics Generator ─────────────────────────────────────────
+const LYRICS_USAGE_KEY = "suno-lyrics-usage-v1";
+
+function loadLyricsUsage() {
+  try { return JSON.parse(localStorage.getItem(LYRICS_USAGE_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveLyricsUsage(data) {
+  try { localStorage.setItem(LYRICS_USAGE_KEY, JSON.stringify(data)); }
+  catch(e) {}
+}
+function getLyricsUsageKey(topic, genre, mood) {
+  return [topic, genre, mood].map(s => (s||"").toLowerCase().trim()).join("|");
+}
+function incrementLyricsUsage(topic, genre, mood) {
+  const history = loadLyricsUsage();
+  const key = getLyricsUsageKey(topic, genre, mood);
+  const existing = history.find(h => h.key === key);
+  if (existing) { existing.count++; existing.lastUsed = Date.now(); }
+  else { history.unshift({ key, topic, genre, mood, count: 1, lastUsed: Date.now() }); }
+  saveLyricsUsage(history);
+  return existing ? existing.count : 1;
+}
+function getLyricsUsageCount(topic, genre, mood) {
+  const key = getLyricsUsageKey(topic, genre, mood);
+  const history = loadLyricsUsage();
+  const entry = history.find(h => h.key === key);
+  return entry ? entry.count : 0;
+}
+
+async function generateLyricsWithGemini(prompt, apiKey) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.9, maxOutputTokens: 1200 }
+      })
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error("Gemini: " + (err?.error?.message || res.statusText));
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
+async function generateLyricsWithGroq(prompt, apiKey) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.9,
+      max_tokens: 1200
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error("Groq: " + (err?.error?.message || res.statusText));
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+function buildLyricsPrompt(topic, genre, mood, primaryLang, wholeLang, insertionLang, notes, songIndex, total) {
+  const langInstruction = wholeLang.trim()
+    ? `Write the ENTIRE song in ${wholeLang}. Do not use any other language.`
+    : insertionLang.trim()
+      ? `Write primarily in ${primaryLang}. Naturally weave in ${insertionLang} — subtle and authentic to the genre.`
+      : `Write in ${primaryLang || "English"}.`;
+  const uniqueness = total > 1
+    ? `This is song ${songIndex + 1} of ${total}. Make it DISTINCTLY different — different perspective, imagery, and feel.`
+    : "";
+  return `You are a professional songwriter specializing in ${genre || "contemporary"} music.
+
+Write a complete song with this exact structure and labels:
+[Verse 1]
+[Chorus]
+[Verse 2]
+[Chorus]
+[Verse 3]
+[Chorus]
+[Outro]
+
+Requirements:
+- Topic/Theme: ${topic || "open"}
+- Genre: ${genre || "contemporary"}
+- Mood/Vibe: ${mood || "expressive"}
+- Each verse: 4+ lines, authentic to the genre
+- Chorus: 4-6 lines, hook-worthy, repeated identically each time
+- Outro: 2-4 lines, satisfying resolution
+- ${langInstruction}
+${notes ? `- Additional direction: ${notes}` : ""}
+${uniqueness}
+
+Return ONLY the lyrics with section labels. No explanations. Start directly with [Verse 1].`;
+}
+
+function LyricsSongCard({ song, index, onCopy, copiedIndex }) {
+  const lines = song.lyrics.split("\n");
+  const isCopied = copiedIndex === index;
+
+  const renderLyrics = () => {
+    return lines.map((line, i) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={i} style={{height:"8px"}}/>;
+      if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+        return <div key={i} style={{fontSize:"9px",color:"#2a9d8f",letterSpacing:"2px",textTransform:"uppercase",marginTop:"18px",marginBottom:"4px",fontFamily:"'DM Mono',monospace"}}>{trimmed}</div>;
+      }
+      return <div key={i} style={{fontSize:"14px",lineHeight:1.8,color:"#c8d0dc",fontStyle:"italic",fontFamily:"Georgia,serif"}}>{trimmed}</div>;
+    });
+  };
+
+  const usageCount = getLyricsUsageCount(song.topic, song.genre, song.mood);
+
+  return (
+    <div style={{background:"#0e1117",border:"1px solid #1e2535",borderRadius:"8px",overflow:"hidden",marginBottom:"12px"}}>
+      <div style={{padding:"12px 16px",borderBottom:"1px solid #1e2535",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"10px",flexWrap:"wrap"}}>
+        <div style={{fontSize:"11px",color:"#475569",fontFamily:"'DM Mono',monospace",letterSpacing:"0.5px"}}>
+          Song {index + 1}{song.genre ? ` · ${song.genre}` : ""}{song.mood ? ` · ${song.mood}` : ""}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:"8px",flexShrink:0}}>
+          {usageCount > 0
+            ? <span style={{fontSize:"10px",padding:"2px 8px",background:"#2a9d8f22",color:"#2a9d8f",border:"1px solid #2a9d8f44",borderRadius:"99px",fontFamily:"'DM Mono',monospace",letterSpacing:"1px"}}>♺ {usageCount}x</span>
+            : <span style={{fontSize:"10px",padding:"2px 8px",background:"#22c55e11",color:"#22c55e",border:"1px solid #22c55e33",borderRadius:"99px",fontFamily:"'DM Mono',monospace",letterSpacing:"1px"}}>● new</span>
+          }
+          <button onClick={()=>onCopy(index)} style={{
+            padding:"6px 12px",borderRadius:"5px",fontSize:"11px",
+            background:isCopied?"#2a9d8f22":"#131b2e",
+            color:isCopied?"#2a9d8f":"#64748b",
+            border:`1px solid ${isCopied?"#2a9d8f":"#1e2d44"}`,
+            cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s",whiteSpace:"nowrap"
+          }}>{isCopied ? "✓ Copied" : "Copy"}</button>
+        </div>
+      </div>
+      <div style={{padding:"16px 18px"}}>
+        {renderLyrics()}
+      </div>
+    </div>
+  );
+}
+
+function LyricsApiSetup({ geminiKey, groqKey, provider, onSave }) {
+  const [g, setG] = useState(geminiKey);
+  const [q, setQ] = useState(groqKey);
+  const [p, setP] = useState(provider);
+  return (
+    <div style={{background:"#0e1117",border:"1px solid #1e2535",borderRadius:"8px",padding:"20px",marginBottom:"24px"}}>
+      <div style={{fontSize:"11px",color:"#2a9d8f",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"14px",fontFamily:"'DM Mono',monospace"}}>AI Provider Setup</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"14px"}}>
+        <div>
+          <label style={{fontSize:"10px",color:"#475569",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"6px",fontFamily:"'DM Mono',monospace"}}>Gemini Flash Key</label>
+          <input type="password" value={g} onChange={e=>setG(e.target.value)} placeholder="AIza..."
+            style={{width:"100%",background:"#070b12",border:"1px solid #1e2d44",borderRadius:"6px",color:"#e2e8f0",padding:"9px 12px",fontSize:"12px",fontFamily:"'DM Mono',monospace"}}/>
+          <div style={{fontSize:"10px",color:"#334155",marginTop:"4px"}}>Free at <a href="https://aistudio.google.com/app/apikey" target="_blank" style={{color:"#2a9d8f"}}>aistudio.google.com</a></div>
+        </div>
+        <div>
+          <label style={{fontSize:"10px",color:"#475569",letterSpacing:"2px",textTransform:"uppercase",display:"block",marginBottom:"6px",fontFamily:"'DM Mono',monospace"}}>Groq Key</label>
+          <input type="password" value={q} onChange={e=>setQ(e.target.value)} placeholder="gsk_..."
+            style={{width:"100%",background:"#070b12",border:"1px solid #1e2d44",borderRadius:"6px",color:"#e2e8f0",padding:"9px 12px",fontSize:"12px",fontFamily:"'DM Mono',monospace"}}/>
+          <div style={{fontSize:"10px",color:"#334155",marginTop:"4px"}}>Free at <a href="https://console.groq.com/keys" target="_blank" style={{color:"#2a9d8f"}}>console.groq.com</a></div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:"8px",marginBottom:"14px"}}>
+        {["gemini","groq","auto"].map(opt=>(
+          <button key={opt} onClick={()=>setP(opt)} style={{
+            flex:1,padding:"7px",borderRadius:"5px",fontSize:"11px",
+            background:p===opt?"#2a9d8f22":"#131b2e",
+            color:p===opt?"#2a9d8f":"#64748b",
+            border:`1px solid ${p===opt?"#2a9d8f":"#1e2d44"}`,
+            cursor:"pointer",fontFamily:"'DM Mono',monospace",letterSpacing:"1px",textTransform:"uppercase"
+          }}>{opt==="gemini"?"✦ Gemini":opt==="groq"?"⚡ Groq":"↺ Auto"}</button>
+        ))}
+      </div>
+      <button onClick={()=>onSave(g,q,p)} style={{
+        padding:"8px 20px",borderRadius:"6px",background:"#2a9d8f",color:"#fff",
+        border:"none",cursor:"pointer",fontSize:"12px",fontWeight:700,fontFamily:"inherit"
+      }}>Save Settings</button>
+    </div>
+  );
+}
+
+function LyricsUsageHistory() {
+  const [open, setOpen] = useState(false);
+  const history = loadLyricsUsage();
+  if (history.length === 0) return null;
+  return (
+    <div style={{background:"#0e1117",border:"1px solid #1e2535",borderRadius:"8px",marginBottom:"24px",overflow:"hidden"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{
+        width:"100%",background:"none",border:"none",padding:"12px 16px",
+        display:"flex",alignItems:"center",justifyContent:"space-between",
+        cursor:"pointer",color:"#64748b",fontFamily:"'DM Mono',monospace",
+        fontSize:"10px",letterSpacing:"2px",textTransform:"uppercase"
+      }}>
+        <span>♺ Usage History <span style={{background:"#2a9d8f22",color:"#2a9d8f",border:"1px solid #2a9d8f44",borderRadius:"99px",padding:"1px 7px",marginLeft:"6px"}}>{history.length}</span></span>
+        <span>{open?"▲":"▼"}</span>
+      </button>
+      {open && (
+        <div style={{borderTop:"1px solid #1e2535",maxHeight:"220px",overflowY:"auto"}}>
+          {history.map((h,i)=>(
+            <div key={i} style={{padding:"10px 16px",borderBottom:"1px solid #0e1117",display:"flex",alignItems:"center",gap:"10px"}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:"13px",fontStyle:"italic",color:"#c8d0dc",fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.topic||"(no topic)"}</div>
+                <div style={{fontSize:"10px",color:"#334155",fontFamily:"'DM Mono',monospace",marginTop:"2px"}}>{[h.genre,h.mood].filter(Boolean).join(" · ")||"no genre/mood"}</div>
+              </div>
+              <span style={{fontSize:"11px",color:"#2a9d8f",background:"#2a9d8f22",border:"1px solid #2a9d8f44",borderRadius:"99px",padding:"2px 9px",fontFamily:"'DM Mono',monospace",flexShrink:0}}>{h.count}x</span>
+            </div>
+          ))}
+          <div style={{padding:"8px 16px",borderTop:"1px solid #1e2535",textAlign:"right"}}>
+            <button onClick={()=>{if(confirm("Clear all lyrics usage history?")){localStorage.removeItem(LYRICS_USAGE_KEY);window.location.reload();}}} style={{background:"none",border:"1px solid #ef444433",borderRadius:"4px",color:"#ef444466",fontSize:"10px",padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Mono',monospace",letterSpacing:"1px",textTransform:"uppercase"}}>Clear</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
+  const [topic, setTopic] = useState("");
+  const [genre, setGenre] = useState("");
+  const [mood, setMood] = useState("");
+  const [songCount, setSongCount] = useState(1);
+  const [primaryLang, setPrimaryLang] = useState("English");
+  const [wholeLang, setWholeLang] = useState("");
+  const [insertionLang, setInsertionLang] = useState("");
+  const [notes, setNotes] = useState("");
+  const [songs, setSongs] = useState([]);
+  const [generating, setGenerating] = useState(false);
+  const [status, setStatus] = useState("");
+  const [statusType, setStatusType] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [copiedIndex, setCopiedIndex] = useState(null);
+  const [showSetup, setShowSetup] = useState(false);
+  const [, forceUpdate] = useState(0);
+
+  const hasKey = lyricsProvider === "gemini" ? !!geminiKey :
+                 lyricsProvider === "groq" ? !!groqKey :
+                 !!(geminiKey || groqKey);
+
+  const callAI = async (prompt) => {
+    if (lyricsProvider === "gemini") return generateLyricsWithGemini(prompt, geminiKey);
+    if (lyricsProvider === "groq") return generateLyricsWithGroq(prompt, groqKey);
+    try { return await generateLyricsWithGemini(prompt, geminiKey); }
+    catch(e) { console.warn("Gemini failed, trying Groq"); return generateLyricsWithGroq(prompt, groqKey); }
+  };
+
+  const handleGenerate = async () => {
+    if (!topic.trim()) { setStatus("Please enter a song topic."); setStatusType("error"); return; }
+    if (!hasKey) { setShowSetup(true); return; }
+    setGenerating(true); setSongs([]); setStatus(""); setProgress(5);
+    const results = [];
+    for (let i = 0; i < songCount; i++) {
+      setStatus(`Composing song ${i+1} of ${songCount}…`); setStatusType("");
+      setProgress(10 + (i / songCount) * 80);
+      const prompt = buildLyricsPrompt(topic, genre, mood, primaryLang, wholeLang, insertionLang, notes, i, songCount);
+      try {
+        const lyrics = await callAI(prompt);
+        results.push({ lyrics, topic, genre, mood });
+      } catch(e) {
+        results.push({ lyrics: `[Error: ${e.message}]`, topic, genre, mood, error: true });
+      }
+      if (i < songCount - 1) await new Promise(r => setTimeout(r, 800));
+    }
+    setSongs(results); setProgress(100); setGenerating(false);
+    setStatus(`✓ ${songCount} song${songCount>1?"s":""} generated.`); setStatusType("success");
+  };
+
+  const handleCopy = (index) => {
+    const song = songs[index];
+    try { navigator.clipboard.writeText(song.lyrics); } catch {}
+    incrementLyricsUsage(song.topic, song.genre, song.mood);
+    setCopiedIndex(index);
+    forceUpdate(n => n + 1);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const handleCopyAll = () => {
+    const all = songs.map((s,i) => `=== SONG ${i+1} ===\n\n${s.lyrics}`).join("\n\n\n");
+    try { navigator.clipboard.writeText(all); } catch {}
+    songs.forEach(s => incrementLyricsUsage(s.topic, s.genre, s.mood));
+    forceUpdate(n => n + 1);
+    setStatus("✓ All songs copied."); setStatusType("success");
+  };
+
+  const inputStyle = {
+    width:"100%", background:"#0e1117", border:"1px solid #1e2535",
+    borderRadius:"6px", color:"#c8d0dc", padding:"9px 12px",
+    fontSize:"13px", fontFamily:"inherit"
+  };
+  const labelStyle = {
+    fontSize:"10px", color:"#475569", letterSpacing:"2px",
+    textTransform:"uppercase", display:"block", marginBottom:"6px",
+    fontFamily:"'DM Mono',monospace"
+  };
+  const countBtnStyle = (active) => ({
+    width:"38px", height:"38px", borderRadius:"5px",
+    background: active ? "#2a9d8f22" : "#131b2e",
+    color: active ? "#2a9d8f" : "#64748b",
+    border: `1px solid ${active ? "#2a9d8f" : "#1e2d44"}`,
+    cursor:"pointer", fontSize:"13px", fontFamily:"inherit"
+  });
+
+  return (
+    <div style={{maxWidth:"680px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px",flexWrap:"wrap",gap:"10px"}}>
+        <div>
+          <h2 style={{fontSize:"22px",fontWeight:700,color:"#e2e8f0",letterSpacing:"-0.5px",marginBottom:"4px"}}>Lyrics Generator</h2>
+          <p style={{color:"#475569",fontSize:"13px",lineHeight:1.6}}>Generate full songs: 3 verses · chorus · outro · free AI</p>
+        </div>
+        <button onClick={()=>setShowSetup(s=>!s)} style={{
+          padding:"7px 14px",borderRadius:"5px",background:"#131b2e",
+          color: hasKey?"#2a9d8f":"#f59e0b",
+          border:`1px solid ${hasKey?"#2a9d8f44":"#f59e0b44"}`,
+          cursor:"pointer",fontSize:"11px",fontFamily:"'DM Mono',monospace",letterSpacing:"1px"
+        }}>{hasKey ? "✓ AI Keys" : "⚠ Set AI Keys"}</button>
+      </div>
+
+      {showSetup && (
+        <LyricsApiSetup
+          geminiKey={geminiKey} groqKey={groqKey} provider={lyricsProvider}
+          onSave={(g,q,p) => { onUpdateKeys(g,q,p); setShowSetup(false); }}
+        />
+      )}
+
+      <LyricsUsageHistory key={songs.length} />
+
+      {/* Form */}
+      <div style={{background:"#0e1117",border:"1px solid #1e2535",borderRadius:"8px",padding:"22px",marginBottom:"20px"}}>
+        <div style={{marginBottom:"16px"}}>
+          <label style={labelStyle}>Song Topic / Theme</label>
+          <input value={topic} onChange={e=>setTopic(e.target.value)} placeholder="e.g. a midnight train journey, lost love…" style={inputStyle}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"16px"}}>
+          <div>
+            <label style={labelStyle}>Genre</label>
+            <input value={genre} onChange={e=>setGenre(e.target.value)} placeholder="e.g. Bossa Nova, Afrobeats…" style={inputStyle}/>
+          </div>
+          <div>
+            <label style={labelStyle}>Mood / Vibe</label>
+            <input value={mood} onChange={e=>setMood(e.target.value)} placeholder="e.g. melancholic, euphoric…" style={inputStyle}/>
+          </div>
+        </div>
+        <div style={{marginBottom:"16px"}}>
+          <label style={labelStyle}>Number of Songs</label>
+          <div style={{display:"flex",gap:"6px"}}>
+            {[1,2,3,4,5].map(n=>(
+              <button key={n} onClick={()=>setSongCount(n)} style={countBtnStyle(songCount===n)}>{n}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{borderTop:"1px solid #1e2535",paddingTop:"16px",marginBottom:"16px"}}>
+          <div style={{fontSize:"10px",color:"#334155",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:"12px"}}>Language Settings</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"12px"}}>
+            <div>
+              <label style={labelStyle}>Primary Language</label>
+              <input value={primaryLang} onChange={e=>setPrimaryLang(e.target.value)} placeholder="English" style={inputStyle}/>
+            </div>
+            <div>
+              <label style={labelStyle}>Whole Song In (optional)</label>
+              <input value={wholeLang} onChange={e=>setWholeLang(e.target.value)} placeholder="e.g. Afrikaans, Spanish…" style={inputStyle}/>
+            </div>
+          </div>
+          <div style={{marginBottom:"12px"}}>
+            <label style={labelStyle}>Language Insertions (optional)</label>
+            <input value={insertionLang} onChange={e=>setInsertionLang(e.target.value)} placeholder="e.g. a few Portuguese phrases, one Spanish line per chorus…" style={inputStyle}/>
+          </div>
+        </div>
+        <div style={{marginBottom:"16px"}}>
+          <label style={labelStyle}>Additional Notes (optional)</label>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3}
+            placeholder="e.g. inspired by João Gilberto, avoid clichés, include a bridge…"
+            style={{...inputStyle, resize:"vertical", lineHeight:1.6}}/>
+        </div>
+
+        {generating && (
+          <div style={{height:"3px",background:"#1e2535",borderRadius:"2px",marginBottom:"10px",overflow:"hidden"}}>
+            <div style={{height:"100%",background:"#2a9d8f",borderRadius:"2px",width:`${progress}%`,transition:"width 0.4s ease"}}/>
+          </div>
+        )}
+        {status && (
+          <div style={{fontSize:"12px",color:statusType==="error"?"#ef4444":statusType==="success"?"#22c55e":"#64748b",marginBottom:"12px",fontFamily:"'DM Mono',monospace"}}>{status}</div>
+        )}
+
+        <div style={{display:"flex",gap:"10px"}}>
+          <button onClick={handleGenerate} disabled={generating} style={{
+            flex:1, padding:"11px", borderRadius:"7px",
+            background:generating?"#1a2235":"#2a9d8f",
+            color:generating?"#334155":"#fff",
+            border:"none", cursor:generating?"default":"pointer",
+            fontSize:"13px", fontWeight:700, fontFamily:"inherit"
+          }}>{generating ? "Generating…" : "✦ Generate Lyrics"}</button>
+          {songs.length > 1 && (
+            <button onClick={handleCopyAll} style={{
+              padding:"11px 18px",borderRadius:"7px",background:"#131b2e",
+              color:"#94a3b8",border:"1px solid #1e2d44",
+              cursor:"pointer",fontSize:"12px",fontFamily:"inherit",fontWeight:600
+            }}>Copy All</button>
+          )}
+        </div>
+      </div>
+
+      {/* Results */}
+      {songs.length > 0 && (
+        <div>
+          <div style={{fontSize:"10px",color:"#334155",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:"14px"}}>Generated Lyrics</div>
+          {songs.map((s,i) => (
+            <LyricsSongCard key={i} song={s} index={i} onCopy={handleCopy} copiedIndex={copiedIndex}/>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function InstallBanner({ onInstall, onDismiss }) {
   return (
     <div style={{
@@ -219,6 +640,9 @@ function App() {
   const [showApiModal, setShowApiModal] = useState(false);
   const [db, setDb] = useState(() => loadDB());
   const [view, setView] = useState("welcome");
+  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem("lyrics-gemini-key") || "");
+  const [groqKey, setGroqKey] = useState(() => localStorage.getItem("lyrics-groq-key") || "");
+  const [lyricsProvider, setLyricsProvider] = useState(() => localStorage.getItem("lyrics-provider") || "gemini");
   const [activeGenre, setActiveGenre] = useState(null);
   const [genreInput, setGenreInput] = useState("");
   const [generating, setGenerating] = useState({});
@@ -240,6 +664,13 @@ function App() {
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
     if (outcome === "accepted") { setInstallPrompt(null); setShowInstallBanner(false); }
+  };
+
+  const handleUpdateLyricsKeys = (g, q, p) => {
+    localStorage.setItem("lyrics-gemini-key", g);
+    localStorage.setItem("lyrics-groq-key", q);
+    localStorage.setItem("lyrics-provider", p);
+    setGeminiKey(g); setGroqKey(q); setLyricsProvider(p);
   };
 
   const genres = Object.keys(db).sort();
@@ -368,7 +799,20 @@ function App() {
               <span style={{fontSize:"16px",lineHeight:1}}>＋</span> Add Genres
             </button>
           </div>
-          <div style={{padding:"8px 16px 4px"}}>
+          <div style={{padding:"6px 12px 0"}}>
+            <button onClick={()=>setView("lyrics")} style={{
+              width:"100%",padding:"9px 12px",borderRadius:"7px",
+              background:view==="lyrics"?"#2a9d8f":"#131b2e",
+              color:view==="lyrics"?"#fff":"#94a3b8",
+              border:`1px solid ${view==="lyrics"?"#2a9d8f":"#1e2d44"}`,
+              cursor:"pointer",fontSize:"13px",fontWeight:600,
+              fontFamily:"inherit",textAlign:"left",
+              display:"flex",alignItems:"center",gap:"8px"
+            }}>
+              <span style={{fontSize:"16px",lineHeight:1}}>♪</span> Lyrics
+            </button>
+          </div>
+          <div style={{padding:"8px 16px 4px",marginTop:"8px"}}>
             <span style={{fontSize:"10px",color:"#334155",letterSpacing:"2px",textTransform:"uppercase"}}>Library</span>
           </div>
           {genres.length===0 && (
@@ -484,6 +928,15 @@ function App() {
                 </div>
               )}
             </div>
+          )}
+
+          {view==="lyrics" && (
+            <LyricsView
+              geminiKey={geminiKey}
+              groqKey={groqKey}
+              lyricsProvider={lyricsProvider}
+              onUpdateKeys={handleUpdateLyricsKeys}
+            />
           )}
 
           {view==="welcome" && (
