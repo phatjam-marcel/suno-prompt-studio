@@ -1,6 +1,5 @@
-const CACHE_NAME = "suno-prompt-studio-v2";
+const CACHE_NAME = "suno-prompt-studio-v3";
 
-// Only cache local files — no external CDN URLs
 const ASSETS = [
   "/suno-prompt-studio/",
   "/suno-prompt-studio/index.html",
@@ -9,7 +8,6 @@ const ASSETS = [
   "/suno-prompt-studio/icon-512.png"
 ];
 
-// Install: cache only local assets
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -19,7 +17,6 @@ self.addEventListener("install", event => {
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -29,13 +26,12 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// Fetch: serve local files from cache, everything else from network
 self.addEventListener("fetch", event => {
   const url = event.request.url;
-
-  // Always go to network for API calls and external resources
   if (
     url.includes("api.anthropic.com") ||
+    url.includes("googleapis.com") ||
+    url.includes("groq.com") ||
     url.includes("fonts.googleapis.com") ||
     url.includes("fonts.gstatic.com") ||
     url.includes("cdnjs.cloudflare.com")
@@ -43,8 +39,6 @@ self.addEventListener("fetch", event => {
     event.respondWith(fetch(event.request));
     return;
   }
-
-  // For local files: cache first, fall back to network
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
