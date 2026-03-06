@@ -1,4 +1,4 @@
-const CACHE_NAME = "suno-prompt-studio-v4";
+const CACHE_NAME = "suno-prompt-studio-v5";
 
 const ASSETS = [
   "/suno-prompt-studio/",
