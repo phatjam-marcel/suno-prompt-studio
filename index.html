@@ -221,7 +221,10 @@ Requirements:
 ${notes ? `- Additional direction: ${notes}` : ""}
 ${uniqueness}
 
-Return ONLY the lyrics with section labels. No explanations. Start directly with [Verse 1].`;
+Start your response with a title line in this exact format:
+TITLE: Your Song Title Here
+
+Then the lyrics immediately after. No other explanations or commentary.`;
 }
 
 function LyricsSongCard({ song, index, onCopy, copiedIndex }) {
@@ -244,8 +247,13 @@ function LyricsSongCard({ song, index, onCopy, copiedIndex }) {
   return (
     <div style={{background:"#162030",border:"1px solid #1e2535",borderRadius:"8px",overflow:"hidden",marginBottom:"12px"}}>
       <div style={{padding:"12px 16px",borderBottom:"1px solid #1e2535",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"10px",flexWrap:"wrap"}}>
-        <div style={{fontSize:"11px",color:"#546a80",fontFamily:"'DM Mono',monospace",letterSpacing:"0.5px"}}>
-          Song {index + 1}{song.genre ? ` · ${song.genre}` : ""}{song.mood ? ` · ${song.mood}` : ""}
+        <div style={{minWidth:0}}>
+          {song.title && (
+            <div style={{fontSize:"15px",fontWeight:700,color:"#e8f0f8",fontFamily:"Georgia,serif",fontStyle:"italic",marginBottom:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{song.title}</div>
+          )}
+          <div style={{fontSize:"11px",color:"#546a80",fontFamily:"'DM Mono',monospace",letterSpacing:"0.5px"}}>
+            Song {index + 1}{song.genre ? ` · ${song.genre}` : ""}{song.mood ? ` · ${song.mood}` : ""}
+          </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"8px",flexShrink:0}}>
           {usageCount > 0
@@ -382,10 +390,14 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
       setProgress(10 + (i / songCount) * 80);
       const prompt = buildLyricsPrompt(topic, genre, mood, primaryLang, wholeLang, insertionLang, notes, i, songCount);
       try {
-        const lyrics = await callAI(prompt);
-        results.push({ lyrics, topic, genre, mood });
+        const raw = await callAI(prompt);
+        // Extract title if present
+        const titleMatch = raw.match(/^TITLE:\s*(.+)/m);
+        const title = titleMatch ? titleMatch[1].trim() : "";
+        const lyrics = raw.replace(/^TITLE:\s*.+\n?/m, "").trim();
+        results.push({ lyrics, title, topic, genre, mood });
       } catch(e) {
-        results.push({ lyrics: `[Error: ${e.message}]`, topic, genre, mood, error: true });
+        results.push({ lyrics: `[Error: ${e.message}]`, title: "", topic, genre, mood, error: true });
       }
       if (i < songCount - 1) await new Promise(r => setTimeout(r, 800));
     }
@@ -395,7 +407,8 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
 
   const handleCopy = (index) => {
     const song = songs[index];
-    try { navigator.clipboard.writeText(song.lyrics); } catch {}
+    const copyText = song.title ? `${song.title}\n\n${song.lyrics}` : song.lyrics;
+    try { navigator.clipboard.writeText(copyText); } catch {}
     incrementLyricsUsage(song.topic, song.genre, song.mood);
     setCopiedIndex(index);
     forceUpdate(n => n + 1);
@@ -403,7 +416,7 @@ function LyricsView({ geminiKey, groqKey, lyricsProvider, onUpdateKeys }) {
   };
 
   const handleCopyAll = () => {
-    const all = songs.map((s,i) => `=== SONG ${i+1} ===\n\n${s.lyrics}`).join("\n\n\n");
+    const all = songs.map((s,i) => `=== SONG ${i+1}${s.title ? `: ${s.title}` : ""} ===\n\n${s.lyrics}`).join("\n\n\n");
     try { navigator.clipboard.writeText(all); } catch {}
     songs.forEach(s => incrementLyricsUsage(s.topic, s.genre, s.mood));
     forceUpdate(n => n + 1);
